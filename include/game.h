@@ -15,17 +15,17 @@ class game
 {
 public:
     game();
-    void printCards() const;
-    void printBoard() const;
-    void shuffleDeck();
-
-    void newGame();
+    void print_cards() const;
+    void print_board() const;
     
-    void makeMove(const move& m);
-    void undoMove();
-
-private:
-    void clearBoard();
+    void new_game();
+    
+    void make_move(const move& m);
+    void undmo_move();
+    
+    private:
+    void shuffle_deck();
+    void clear_board();
     std::vector<std::shared_ptr<card>> _cards;
     std::array<std::stack<std::shared_ptr<card>>, TABLEAU_COUNT> _tableau;
     std::array<std::stack<std::shared_ptr<card>>, FOUNDATION_COUNT> _foundation;

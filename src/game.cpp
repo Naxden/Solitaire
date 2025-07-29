@@ -22,7 +22,7 @@ game::game()
     }
 }
 
-void game::printCards() const
+void game::print_cards() const
 {
     std::cout << "-----Cards------" << std::endl;
     for (const auto& card : _cards)
@@ -32,7 +32,7 @@ void game::printCards() const
 
 }
 
-void game::printBoard() const
+void game::print_board() const
 {
     std::cout << "-----Board------" << std::endl;
     for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
@@ -74,18 +74,18 @@ void game::printBoard() const
     
 }
 
-void game::shuffleDeck()
+void game::shuffle_deck()
 {
     std::random_device rd;
     std::mt19937 g(rd());
     std::shuffle(_cards.begin(), _cards.end(), g);
 }
 
-void game::newGame()
+void game::new_game()
 {
-    clearBoard();
+    clear_board();
 
-    shuffleDeck();
+    shuffle_deck();
 
     int usedCardIndex = 0;
     for (int tableauIndex = 0; tableauIndex < TABLEAU_COUNT; tableauIndex++)
@@ -96,24 +96,24 @@ void game::newGame()
         {
             auto& card = _cards.at(usedCardIndex);
 
-            card->setState(card_state::tableau);
+            card->set_state(card_state::tableau);
             tableau.push(card);
             usedCardIndex++;
         }
 
-        tableau.top()->setVisibility(true);
+        tableau.top()->set_visibility(true);
     }
 
     for (; usedCardIndex < COLOR_COUNT * VALUE_COUNT; usedCardIndex++)
     {
         auto& card = _cards.at(usedCardIndex);
 
-        card->setState(card_state::deck);
+        card->set_state(card_state::deck);
         _deck.push_back(card);
     }
 }
 
-void game::clearBoard()
+void game::clear_board()
 {
     for (auto& tstack : _tableau)
     {
@@ -131,7 +131,7 @@ void game::clearBoard()
 
     for (auto& card : _cards)
     {
-        card->setState(card_state::undefined);
-        card->setVisibility(false);
+        card->set_state(card_state::undefined);
+        card->set_visibility(false);
     }
 }

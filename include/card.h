@@ -54,16 +54,16 @@ public:
     card(card_suit suit, card_value value);
     ~card();
     
-    void setState(card_state newState) { _state = newState; }
-    void setVisibility(bool isVisible) { _isVisible = isVisible; }
-    bool canBePlacedOn(card& other) const;
+    void set_state(card_state newState) { _state = newState; }
+    void set_visibility(bool isVisible) { _isVisible = isVisible; }
+    bool can_be_placed_on(card& other) const;
 
     // Public getters
-    card_suit getSuit() const { return _suite; }
-    card_value getValue() const { return _value; }
-    card_state getState() const { return _state; }
-    bool isVisible() const { return _isVisible; }
-    card* getChild() const { return _child.get(); }
+    card_suit get_suit() const { return _suite; }
+    card_value get_value() const { return _value; }
+    card_state get_state() const { return _state; }
+    bool is_visible() const { return _isVisible; }
+    card* get_child() const { return _child.get(); }
 
 private:
     card_suit _suite;

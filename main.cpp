@@ -4,9 +4,9 @@
 int main(int, char**){
     game game;
 
-    game.printCards();
+    game.print_cards();
 
-    game.newGame();
-    game.printBoard();
-    game.printCards();
+    game.new_game();
+    game.print_board();
+    game.print_cards();
 }

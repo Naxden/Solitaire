@@ -49,8 +49,8 @@ inline const char* toString(card_state state)
 inline void print_card(const card& card)
 {
     std::cout << std::format("{} {} {}",
-        toString(card.getSuit()),
-        toString(card.getValue()),
-        card.isVisible() ? "Visible" : "Hidden")
+        toString(card.get_suit()),
+        toString(card.get_value()),
+        card.is_visible() ? "Visible" : "Hidden")
         << std::endl;
 }
