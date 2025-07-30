@@ -56,7 +56,7 @@ public:
     
     void set_state(card_state newState) { _state = newState; }
     void set_visibility(bool isVisible) { _isVisible = isVisible; }
-    bool can_be_placed_on(card& other) const;
+    bool can_be_placed_on(const card& other) const;
 
     // Public getters
     card_suit get_suit() const { return _suite; }
@@ -64,6 +64,7 @@ public:
     card_state get_state() const { return _state; }
     bool is_visible() const { return _isVisible; }
     card* get_child() const { return _child.get(); }
+    void set_child(std::shared_ptr<card> otherCard) { _child = otherCard; }
 
 private:
     card_suit _suite;

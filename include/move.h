@@ -1,11 +1,9 @@
 #pragma once
-#include <memory>
 
 class card;
 
-class move
+struct move
 {
-public:
-    card from;
-    card to;
+    card moved;
+    card target;
 };

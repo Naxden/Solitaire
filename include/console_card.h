@@ -6,10 +6,10 @@
 inline const char* toString(card_suit suit)
 {
     switch (suit) {
-        case card_suit::Hearths:   return "Hearts";
-        case card_suit::Diamonds:  return "Diamonds";
-        case card_suit::Clubs:     return "Clubs";
-        case card_suit::Spades:    return "Spades";
+        case card_suit::Hearths:   return "♥️ Hearts";
+        case card_suit::Diamonds:  return "♦️ Diamonds";
+        case card_suit::Clubs:     return "♣️ Clubs";
+        case card_suit::Spades:    return "♠️ Spades";
         default:                   return "Unknown";
     }
 }

@@ -20,8 +20,11 @@ public:
     
     void new_game();
     
-    void make_move(const move& m);
-    void undmo_move();
+    void next_deck();
+
+    void move_deck_to_tableau();
+
+    void undo_move();
     
     private:
     void shuffle_deck();
@@ -30,5 +33,6 @@ public:
     std::array<std::stack<std::shared_ptr<card>>, TABLEAU_COUNT> _tableau;
     std::array<std::stack<std::shared_ptr<card>>, FOUNDATION_COUNT> _foundation;
     std::vector<std::shared_ptr<card>> _deck;
+    std::vector<std::shared_ptr<card>>::iterator _deckIter;
     std::stack<move> _moves;
 };

@@ -20,6 +20,8 @@ game::game()
             ));
         }
     }
+
+    _deckIter = _deck.end();
 }
 
 void game::print_cards() const
@@ -35,6 +37,7 @@ void game::print_cards() const
 void game::print_board() const
 {
     std::cout << "-----Board------" << std::endl;
+    std::cout << "-----Tableau------" << std::endl;
     for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
     {
         const auto& tableau = _tableau.at(tIndex);
@@ -50,6 +53,7 @@ void game::print_board() const
         }
     }
 
+    std::cout << "-----Foundation------" << std::endl;
     for (int fIndex = 0; fIndex < FOUNDATION_COUNT; fIndex++)
     {
         const auto& foundation = _foundation.at(fIndex);
@@ -66,12 +70,20 @@ void game::print_board() const
         }
     }
 
+    int deckIndex = (_deckIter != _deck.end()) ?
+        std::distance<std::vector<std::shared_ptr<card>>::const_iterator>(_deck.begin(), _deckIter) :
+        -1;
     std::cout << "-----Deck------" << std::endl;
-    for (const auto& card : _deck)
+    std::cout << std::format("Deck has: {} cards. Index {}. Current card: ",
+        _deck.size(), deckIndex);
+    if (_deckIter != _deck.end())
     {
-        print_card(*card);
+        print_card(*(*_deckIter));   
     }
-    
+    else
+    {
+        std::cout << "---" << std::endl;
+    }
 }
 
 void game::shuffle_deck()
@@ -110,6 +122,58 @@ void game::new_game()
 
         card->set_state(card_state::deck);
         _deck.push_back(card);
+    }
+
+    _deckIter = _deck.end();
+}
+
+void game::next_deck()
+{
+    if (!_deck.empty())
+    {
+        if (_deckIter != _deck.end())
+        {
+            (*_deckIter)->set_visibility(false);
+            ++_deckIter;
+        }
+        else
+        {
+            _deckIter = _deck.begin();
+        }
+
+        if (_deckIter != _deck.end())
+        {
+            (*_deckIter)->set_visibility(true);
+        }
+    }
+}
+
+void game::move_deck_to_tableau()
+{
+    if (_deck.size() > 0 && _deckIter != _deck.end())
+    {
+        const auto& deck_card = *_deckIter;
+        
+        int tIndex = 0;
+        std::shared_ptr<card> tableau_card;
+
+        for (; tIndex < TABLEAU_COUNT; tIndex++)
+        {
+            if (_tableau.at(tIndex).size() > 0 &&
+                _tableau.at(tIndex).top()->can_be_placed_on(*deck_card))
+            {
+                tableau_card = _tableau.at(tIndex).top();
+                break;
+            }
+        }
+
+        if (tableau_card != nullptr)
+        {
+           move newMove = {*deck_card, *tableau_card};
+           
+           tableau_card->set_child(deck_card);
+           _deck.erase(_deckIter);
+        }
     }
 }
 

@@ -12,7 +12,7 @@ card::~card()
     std::cout << "Card destructor has been called" << std::endl;
 }
 
-bool card::can_be_placed_on(card &other) const
+bool card::can_be_placed_on(const card &other) const
 {
     if (_child == nullptr)
     {
