@@ -31,8 +31,11 @@ bool card::can_be_placed_on(card &other) const
         case card_state::foundation:
             if (_suite == other._suite)
             {
-                return static_cast<uint8_t>(_value) ==
+                if (!other.get_child())
+                {
+                    return static_cast<uint8_t>(_value) ==
                         static_cast<uint8_t>(other._value) + 1;
+                }
             }
             break;
         
