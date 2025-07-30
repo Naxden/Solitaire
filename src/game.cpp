@@ -40,7 +40,7 @@ void game::print_board() const
     std::cout << "-----Tableau------" << std::endl;
     for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
     {
-        const auto& tableau = _tableau.at(tIndex);
+        const auto& tableau = _tableaus.at(tIndex);
         std::cout << std::format("Tableau{} has: {} cards. Top: ", tIndex, tableau.size());
 
         if (!tableau.empty())
@@ -56,7 +56,7 @@ void game::print_board() const
     std::cout << "-----Foundation------" << std::endl;
     for (int fIndex = 0; fIndex < FOUNDATION_COUNT; fIndex++)
     {
-        const auto& foundation = _foundation.at(fIndex);
+        const auto& foundation = _foundations.at(fIndex);
         std::cout << std::format("Foundation{} has: {} cards. Top: ",
         fIndex, foundation.size());
 
@@ -102,7 +102,7 @@ void game::new_game()
     int usedCardIndex = 0;
     for (int tableauIndex = 0; tableauIndex < TABLEAU_COUNT; tableauIndex++)
     {
-        auto& tableau = _tableau.at(tableauIndex);
+        auto& tableau = _tableaus.at(tableauIndex);
 
         for (int tableuCards = 0; tableuCards <= tableauIndex; tableuCards++)
         {
@@ -154,38 +154,42 @@ void game::move_deck_to_tableau()
     {
         const auto& deck_card = *_deckIter;
         
-        int tIndex = 0;
-        std::shared_ptr<card> tableau_card;
+        auto validTableauIterator = _tableaus.begin();
 
-        for (; tIndex < TABLEAU_COUNT; tIndex++)
+        while (validTableauIterator != _tableaus.end())
         {
-            if (_tableau.at(tIndex).size() > 0 &&
-                _tableau.at(tIndex).top()->can_be_placed_on(*deck_card))
+            if (!validTableauIterator->empty() &&
+                validTableauIterator->top()->can_be_placed_on(*deck_card))
             {
-                tableau_card = _tableau.at(tIndex).top();
                 break;
             }
+
+            validTableauIterator++;
         }
 
-        if (tableau_card != nullptr)
-        {
-           move newMove = {*deck_card, *tableau_card};
-           
-           tableau_card->set_child(deck_card);
-           _deck.erase(_deckIter);
+        if (validTableauIterator != _tableaus.end())
+        {  
+            _moves.push({*deck_card, *validTableauIterator->top()});
+
+            deck_card->set_state(card_state::tableau);
+            validTableauIterator->top()->set_child(deck_card);
+            validTableauIterator->push(deck_card);
+
+            // TODO handle _deckIter
+            _deck.erase(_deckIter);
         }
     }
 }
 
 void game::clear_board()
 {
-    for (auto& tstack : _tableau)
+    for (auto& tstack : _tableaus)
     {
         while(!tstack.empty())
             tstack.pop();
     }
     
-    for (auto& fstack : _foundation)
+    for (auto& fstack : _foundations)
     {
         while(!fstack.empty())
             fstack.pop();

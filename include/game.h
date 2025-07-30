@@ -30,8 +30,8 @@ public:
     void shuffle_deck();
     void clear_board();
     std::vector<std::shared_ptr<card>> _cards;
-    std::array<std::stack<std::shared_ptr<card>>, TABLEAU_COUNT> _tableau;
-    std::array<std::stack<std::shared_ptr<card>>, FOUNDATION_COUNT> _foundation;
+    std::array<std::stack<std::shared_ptr<card>>, TABLEAU_COUNT> _tableaus;
+    std::array<std::stack<std::shared_ptr<card>>, FOUNDATION_COUNT> _foundations;
     std::vector<std::shared_ptr<card>> _deck;
     std::vector<std::shared_ptr<card>>::iterator _deckIter;
     std::stack<move> _moves;

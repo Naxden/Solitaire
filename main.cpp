@@ -16,5 +16,10 @@ int main(int, char**){
         {
             game.next_deck();
         }
+        else if (command == "dt")
+        {
+            game.move_deck_to_tableau();
+        }
+
     }
 }
