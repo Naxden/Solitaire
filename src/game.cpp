@@ -158,8 +158,14 @@ void game::move_deck_to_tableau()
 
         while (validTableauIterator != _tableaus.end())
         {
-            if (!validTableauIterator->empty() &&
-                validTableauIterator->top()->can_be_placed_on(*deck_card))
+            if (validTableauIterator->empty())
+            {
+                if (deck_card->get_value() == card_value::King)
+                {
+                    break;
+                }
+            }
+            else if (validTableauIterator->top()->can_be_placed_on(*deck_card))
             {
                 break;
             }
@@ -200,7 +206,6 @@ void game::move_deck_to_foundation()
             }
             else if (validFoundationIterator->top()->can_be_placed_on(*deck_card))
             {
-                print_card(*deck_card);
                 break;
             }
 
