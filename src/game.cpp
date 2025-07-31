@@ -41,11 +41,12 @@ void game::print_board() const
     for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
     {
         const auto& tableau = _tableaus.at(tIndex);
-        std::cout << std::format("Tableau{} has: {} cards. Top: ", tIndex, tableau.size());
+        std::cout << std::format("Tableau{} has: {} cards. Top: ", tIndex, 
+            get_column_height(tableau));
 
-        if (!tableau.empty())
+        if (tableau)
         {
-            print_card(*tableau.top());
+            print_card(*get_top_card(tableau));
         }
         else
         {
@@ -58,11 +59,11 @@ void game::print_board() const
     {
         const auto& foundation = _foundations.at(fIndex);
         std::cout << std::format("Foundation{} has: {} cards. Top: ",
-        fIndex, foundation.size());
+        fIndex, get_column_height(foundation));
 
-        if (!foundation.empty())
+        if (foundation)
         {
-            print_card(*foundation.top());
+            print_card(*get_top_card(foundation));
         }
         else
         {
@@ -99,6 +100,11 @@ void game::new_game()
 
     shuffle_deck();
 
+    while (!_moves.empty())
+    {
+        _moves.pop();
+    }
+
     int usedCardIndex = 0;
     for (int tableauIndex = 0; tableauIndex < TABLEAU_COUNT; tableauIndex++)
     {
@@ -109,11 +115,18 @@ void game::new_game()
             auto& card = _cards.at(usedCardIndex);
 
             card->set_state(card_state::tableau);
-            tableau.push(card);
+            if (tableau == nullptr)
+            {
+                tableau = card;
+            }
+            else
+            {
+                get_top_card(tableau)->set_child(card);
+            }
             usedCardIndex++;
         }
 
-        tableau.top()->set_visibility(true);
+        get_top_card(tableau)->set_visibility(true);
     }
 
     for (; usedCardIndex < COLOR_COUNT * VALUE_COUNT; usedCardIndex++)
@@ -154,32 +167,47 @@ void game::move_deck_to_tableau()
     {
         const auto& deck_card = *_deckIter;
         
-        auto validTableauIterator = _tableaus.begin();
-
-        while (validTableauIterator != _tableaus.end())
+        std::shared_ptr<card> tableuTopCard = nullptr;
+        uint8_t tableuIndex = 0;
+        bool found = false;
+        while (tableuIndex < TABLEAU_COUNT)
         {
-            if (validTableauIterator->empty())
+            tableuTopCard = _tableaus.at(tableuIndex);
+            if (tableuTopCard == nullptr)
             {
                 if (deck_card->get_value() == card_value::King)
                 {
+                    found = true;
                     break;
                 }
             }
-            else if (validTableauIterator->top()->can_be_placed_on(*deck_card))
+            else
             {
-                break;
+                tableuTopCard = get_top_card(tableuTopCard);
+                if (tableuTopCard->can_be_placed_on(*deck_card))
+                {
+                    found = true;
+                    break;
+                }
             }
 
-            validTableauIterator++;
+            tableuIndex++;
         }
 
-        if (validTableauIterator != _tableaus.end())
+        if (found)
         {  
-            _moves.push({*deck_card, *validTableauIterator->top()});
+            if (tableuTopCard == nullptr)
+            {
+                _moves.push({*deck_card, std::nullopt, tableuIndex});
+                tableuTopCard = deck_card;
+            }
+            else
+            {
+                _moves.push({*deck_card, *tableuTopCard, tableuIndex});
+                tableuTopCard->set_child(deck_card);
+            }
 
             deck_card->set_state(card_state::tableau);
-            validTableauIterator->top()->set_child(deck_card);
-            validTableauIterator->push(deck_card);
 
             _deck.erase(_deckIter);
             _deckIter = _deck.end();
@@ -191,41 +219,49 @@ void game::move_deck_to_foundation()
 {
     if (_deck.size() > 0 && _deckIter != _deck.end())
     {
-       const auto& deck_card = *_deckIter;
+        const auto& deck_card = *_deckIter;
         
-        auto validFoundationIterator = _foundations.begin();
-
-        while (validFoundationIterator != _foundations.end())
+        std::shared_ptr<card> foundationTopCard = nullptr;
+        uint8_t foundationIndex = 0;
+        bool found = false;
+        while (foundationIndex < TABLEAU_COUNT)
         {
-            if (validFoundationIterator->empty())
+            foundationTopCard = _foundations.at(foundationIndex);
+            if (foundationTopCard == nullptr)
             {
                 if (deck_card->get_value() == card_value::Ace)
                 {
+                    found = true;
                     break;
                 }
             }
-            else if (validFoundationIterator->top()->can_be_placed_on(*deck_card))
+            else
             {
-                break;
+                foundationTopCard = get_top_card(foundationTopCard);
+                if (foundationTopCard->can_be_placed_on(*deck_card))
+                {
+                    found = true;
+                    break;
+                }
             }
 
-            validFoundationIterator++;
+            foundationIndex++;
         }
 
-        if (validFoundationIterator != _foundations.end())
-        {
-            if (validFoundationIterator->empty())
+        if (found)
+        {  
+            if (foundationTopCard == nullptr)
             {
-                _moves.push({*deck_card, std::nullopt});
+                _moves.push({*deck_card, std::nullopt, foundationIndex});
+                _foundations.at(foundationIndex) = deck_card;
             }
             else
             {
-                _moves.push({*deck_card, *validFoundationIterator->top()});
-                validFoundationIterator->top()->set_child(deck_card);
+                _moves.push({*deck_card, *foundationTopCard, foundationIndex});
+                foundationTopCard->set_child(deck_card);
             }
 
             deck_card->set_state(card_state::foundation);
-            validFoundationIterator->push(deck_card);
 
             _deck.erase(_deckIter);
             _deckIter = _deck.end();
@@ -233,18 +269,17 @@ void game::move_deck_to_foundation()
     }
 }
 
+
 void game::clear_board()
 {
-    for (auto& tstack : _tableaus)
+    for (auto& tColumn : _tableaus)
     {
-        while(!tstack.empty())
-            tstack.pop();
+        clear_column(tColumn);
     }
     
-    for (auto& fstack : _foundations)
+    for (auto& fColumn : _foundations)
     {
-        while(!fstack.empty())
-            fstack.pop();
+        clear_column(fColumn);
     }
 
     _deck.clear();
@@ -254,4 +289,41 @@ void game::clear_board()
         card->set_state(card_state::undefined);
         card->set_visibility(false);
     }
+}
+
+std::shared_ptr<card> game::get_top_card(const std::shared_ptr<card> head) const
+{
+    auto current = head;
+    while (current && current->get_child())
+    {
+        current = current->get_child();
+    }
+
+    return current;
+}
+
+uint8_t game::get_column_height(const std::shared_ptr<card> head) const
+{
+    uint8_t height = 0;
+    auto current = head;
+    while (current && current->get_child())
+    {
+        current = current->get_child();
+        height++;
+    }
+
+    return height;
+}
+
+void game::clear_column(std::shared_ptr<card>& head)
+{
+    auto current = head;
+    while (current)
+    {
+        auto child = current->get_child();
+        current->set_child(nullptr);
+        current = child;
+    }
+
+    head = nullptr;
 }

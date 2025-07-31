@@ -63,7 +63,7 @@ public:
     card_value get_value() const { return _value; }
     card_state get_state() const { return _state; }
     bool is_visible() const { return _isVisible; }
-    card* get_child() const { return _child.get(); }
+    std::shared_ptr<card> get_child() const { return _child; }
     void set_child(std::shared_ptr<card> otherCard) { _child = otherCard; }
 
 private:

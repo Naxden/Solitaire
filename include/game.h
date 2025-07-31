@@ -30,8 +30,12 @@ public:
     void shuffle_deck();
     void clear_board();
     std::vector<std::shared_ptr<card>> _cards;
-    std::array<std::stack<std::shared_ptr<card>>, TABLEAU_COUNT> _tableaus;
-    std::array<std::stack<std::shared_ptr<card>>, FOUNDATION_COUNT> _foundations;
+
+    std::shared_ptr<card> get_top_card(const std::shared_ptr<card> head) const;
+    uint8_t get_column_height(const std::shared_ptr<card> head) const;
+    void clear_column(std::shared_ptr<card>& head);
+    std::array<std::shared_ptr<card>, TABLEAU_COUNT> _tableaus;
+    std::array<std::shared_ptr<card>, FOUNDATION_COUNT> _foundations;
     std::vector<std::shared_ptr<card>> _deck;
     std::vector<std::shared_ptr<card>>::iterator _deckIter;
     std::stack<move> _moves;
