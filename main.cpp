@@ -20,6 +20,10 @@ int main(int, char**){
         {
             game.move_deck_to_tableau();
         }
+        else if (command == "df")
+        {
+            game.move_deck_to_foundation();
+        }
 
     }
 }

@@ -1,9 +1,10 @@
 #pragma once
+#include <optional>
 
 class card;
 
 struct move
 {
     card moved;
-    card target;
+    std::optional<card> target;
 };

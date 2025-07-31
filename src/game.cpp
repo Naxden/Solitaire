@@ -175,8 +175,55 @@ void game::move_deck_to_tableau()
             validTableauIterator->top()->set_child(deck_card);
             validTableauIterator->push(deck_card);
 
-            // TODO handle _deckIter
             _deck.erase(_deckIter);
+            _deckIter = _deck.end();
+        }
+    }
+}
+
+void game::move_deck_to_foundation()
+{
+    if (_deck.size() > 0 && _deckIter != _deck.end())
+    {
+       const auto& deck_card = *_deckIter;
+        
+        auto validFoundationIterator = _foundations.begin();
+
+        while (validFoundationIterator != _foundations.end())
+        {
+            if (validFoundationIterator->empty())
+            {
+                if (deck_card->get_value() == card_value::Ace)
+                {
+                    break;
+                }
+            }
+            else if (validFoundationIterator->top()->can_be_placed_on(*deck_card))
+            {
+                print_card(*deck_card);
+                break;
+            }
+
+            validFoundationIterator++;
+        }
+
+        if (validFoundationIterator != _foundations.end())
+        {
+            if (validFoundationIterator->empty())
+            {
+                _moves.push({*deck_card, std::nullopt});
+            }
+            else
+            {
+                _moves.push({*deck_card, *validFoundationIterator->top()});
+                validFoundationIterator->top()->set_child(deck_card);
+            }
+
+            deck_card->set_state(card_state::foundation);
+            validFoundationIterator->push(deck_card);
+
+            _deck.erase(_deckIter);
+            _deckIter = _deck.end();
         }
     }
 }

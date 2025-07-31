@@ -23,7 +23,7 @@ public:
     void next_deck();
 
     void move_deck_to_tableau();
-
+    void move_deck_to_foundation();
     void undo_move();
     
     private:
