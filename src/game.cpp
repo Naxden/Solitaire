@@ -163,52 +163,49 @@ void game::next_deck()
 
 void game::move_deck_to_tableau()
 {
-    if (_deck.size() > 0 && _deckIter != _deck.end())
+    if (!_deck.empty() && _deckIter != _deck.end())
     {
         const auto& deck_card = *_deckIter;
-        
-        std::shared_ptr<card> tableuTopCard = nullptr;
-        uint8_t tableuIndex = 0;
-        bool found = false;
-        while (tableuIndex < TABLEAU_COUNT)
+        int targetIndex = -1;
+        std::shared_ptr<card> targetTop = nullptr;
+
+        for (uint8_t i = 0; i < TABLEAU_COUNT; ++i)
         {
-            tableuTopCard = _tableaus.at(tableuIndex);
-            if (tableuTopCard == nullptr)
+            auto& tableau = _tableaus[i];
+            if (!tableau)
             {
                 if (deck_card->get_value() == card_value::King)
                 {
-                    found = true;
+                    targetIndex = i;
                     break;
                 }
             }
             else
             {
-                tableuTopCard = get_top_card(tableuTopCard);
-                if (tableuTopCard->can_be_placed_on(*deck_card))
+                auto top = get_top_card(tableau);
+                if (top->can_be_placed_on(*deck_card))
                 {
-                    found = true;
+                    targetIndex = i;
+                    targetTop = top;
                     break;
                 }
             }
-
-            tableuIndex++;
         }
 
-        if (found)
-        {  
-            if (tableuTopCard == nullptr)
+        if (targetIndex >= 0)
+        {
+            if (!targetTop)
             {
-                _moves.push({*deck_card, std::nullopt, tableuIndex});
-                tableuTopCard = deck_card;
+                _moves.push({*deck_card, std::nullopt, static_cast<uint8_t>(targetIndex)});
+                _tableaus[targetIndex] = deck_card;
             }
             else
             {
-                _moves.push({*deck_card, *tableuTopCard, tableuIndex});
-                tableuTopCard->set_child(deck_card);
+                _moves.push({*deck_card, *targetTop, static_cast<uint8_t>(targetIndex)});
+                targetTop->set_child(deck_card);
             }
-
+        
             deck_card->set_state(card_state::tableau);
-
             _deck.erase(_deckIter);
             _deckIter = _deck.end();
         }
