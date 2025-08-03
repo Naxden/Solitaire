@@ -20,8 +20,6 @@ game::game()
             ));
         }
     }
-
-    _deckIter = _deck.end();
 }
 
 void game::print_cards() const
@@ -71,15 +69,12 @@ void game::print_board() const
         }
     }
 
-    int deckIndex = (_deckIter != _deck.end()) ?
-        std::distance<std::vector<std::shared_ptr<card>>::const_iterator>(_deck.begin(), _deckIter) :
-        -1;
     std::cout << "-----Deck------" << std::endl;
     std::cout << std::format("Deck has: {} cards. Index {}. Current card: ",
-        _deck.size(), deckIndex);
-    if (_deckIter != _deck.end())
+        _deck.size(), _deckIndex);
+    if (is_deckIndex_valid())
     {
-        print_card(*(*_deckIter));   
+        print_card(*_deck[_deckIndex]);   
     }
     else
     {
@@ -137,35 +132,42 @@ void game::new_game()
         _deck.push_back(card);
     }
 
-    _deckIter = _deck.end();
+    _deckIndex = -1;
+    _pickedDeckIndex = -1;
 }
 
 void game::next_deck()
 {
     if (!_deck.empty())
     {
-        if (_deckIter != _deck.end())
+        if (_pickedDeckIndex != -1)
         {
-            (*_deckIter)->set_visibility(false);
-            ++_deckIter;
+            _deckIndex = _pickedDeckIndex;
+            _pickedDeckIndex = -1;
         }
         else
         {
-            _deckIter = _deck.begin();
+            if (is_deckIndex_valid())
+            {
+                _deck[_deckIndex]->set_visibility(false);
+            }
+
+            // loop index in range [-1, _deck.size()) 
+            _deckIndex = ((_deckIndex + 2) % (_deck.size() + 1)) - 1;
         }
 
-        if (_deckIter != _deck.end())
+        if (is_deckIndex_valid())
         {
-            (*_deckIter)->set_visibility(true);
+            _deck[_deckIndex]->set_visibility(true);
         }
     }
 }
 
 void game::move_deck_to_tableau()
 {
-    if (!_deck.empty() && _deckIter != _deck.end())
+    if (is_deckIndex_valid())
     {
-        const auto& deck_card = *_deckIter;
+        const auto& deck_card = _deck[_deckIndex];
         int targetIndex = -1;
         std::shared_ptr<card> targetTop = nullptr;
 
@@ -206,17 +208,19 @@ void game::move_deck_to_tableau()
             }
         
             deck_card->set_state(card_state::tableau);
-            _deck.erase(_deckIter);
-            _deckIter = _deck.end();
+
+            _deck.erase(_deck.begin() + _deckIndex);
+            _pickedDeckIndex = _deckIndex;
+            _deckIndex = -1;
         }
     }
 }
 
 void game::move_deck_to_foundation()
 {
-    if (_deck.size() > 0 && _deckIter != _deck.end())
+    if (is_deckIndex_valid())
     {
-        const auto& deck_card = *_deckIter;
+        const auto& deck_card = _deck[_deckIndex];
         
         std::shared_ptr<card> foundationTopCard = nullptr;
         uint8_t foundationIndex = 0;
@@ -260,8 +264,9 @@ void game::move_deck_to_foundation()
 
             deck_card->set_state(card_state::foundation);
 
-            _deck.erase(_deckIter);
-            _deckIter = _deck.end();
+            _deck.erase(_deck.begin() + _deckIndex);
+            _pickedDeckIndex = _deckIndex;
+            _deckIndex = -1;
         }
     }
 }
@@ -323,4 +328,10 @@ void game::clear_column(std::shared_ptr<card>& head)
     }
 
     head = nullptr;
+}
+
+bool game::is_deckIndex_valid() const
+{
+    return !_deck.empty() && _deckIndex >= 0 && 
+        _deckIndex < static_cast<int8_t>(_deck.size());
 }

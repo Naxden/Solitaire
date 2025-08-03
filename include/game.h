@@ -37,6 +37,8 @@ public:
     std::array<std::shared_ptr<card>, TABLEAU_COUNT> _tableaus;
     std::array<std::shared_ptr<card>, FOUNDATION_COUNT> _foundations;
     std::vector<std::shared_ptr<card>> _deck;
-    std::vector<std::shared_ptr<card>>::iterator _deckIter;
+    bool is_deckIndex_valid() const;
+    int8_t _deckIndex = -1;
+    int8_t _pickedDeckIndex = -1;
     std::stack<move> _moves;
 };
