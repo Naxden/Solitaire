@@ -11,8 +11,11 @@ int main(int, char**){
         game.print_board();
 
         std::cin >> command;
-        
-        if (command == "n")
+        if (command == "z")
+        {
+            game.undo_move();
+        }
+        else if (command == "n")
         {
             game.next_deck();
         }

@@ -34,7 +34,6 @@ void game::print_cards() const
 
 void game::print_board() const
 {
-    std::cout << "-----Board------" << std::endl;
     std::cout << "-----Tableau------" << std::endl;
     for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
     {
@@ -80,6 +79,9 @@ void game::print_board() const
     {
         std::cout << "---" << std::endl;
     }
+
+    std::cout << "----Moves----" << std::endl;
+    std::cout << std::format("MovesCount: {}", _moves.size()) << std::endl;
 }
 
 void game::shuffle_deck()
@@ -196,14 +198,16 @@ void game::move_deck_to_tableau()
 
         if (targetIndex >= 0)
         {
+            auto uTargetIndex = static_cast<uint8_t>(targetIndex);
+
             if (!targetTop)
             {
-                _moves.push({*deck_card, std::nullopt, static_cast<uint8_t>(targetIndex)});
+                _moves.push({*deck_card, std::nullopt, uTargetIndex, card_state::tableau});
                 _tableaus[targetIndex] = deck_card;
             }
             else
             {
-                _moves.push({*deck_card, *targetTop, static_cast<uint8_t>(targetIndex)});
+                _moves.push({*deck_card, *targetTop, uTargetIndex, card_state::tableau});
                 targetTop->set_child(deck_card);
             }
         
@@ -223,42 +227,43 @@ void game::move_deck_to_foundation()
         const auto& deck_card = _deck[_deckIndex];
         
         std::shared_ptr<card> foundationTopCard = nullptr;
-        uint8_t foundationIndex = 0;
-        bool found = false;
-        while (foundationIndex < TABLEAU_COUNT)
+        int foundationIndex = -1;
+
+        for (uint8_t i = 0; i < FOUNDATION_COUNT; ++i)
         {
-            foundationTopCard = _foundations.at(foundationIndex);
-            if (foundationTopCard == nullptr)
+            auto& foundation = _foundations[i];
+            if (!foundation)
             {
                 if (deck_card->get_value() == card_value::Ace)
                 {
-                    found = true;
+                    foundationIndex = i;
                     break;
                 }
             }
             else
             {
-                foundationTopCard = get_top_card(foundationTopCard);
-                if (foundationTopCard->can_be_placed_on(*deck_card))
+                auto top = get_top_card(foundation);
+                if (top->can_be_placed_on(*deck_card))
                 {
-                    found = true;
+                    foundationIndex = i;
+                    foundationTopCard = top;
                     break;
                 }
             }
-
-            foundationIndex++;
         }
 
-        if (found)
+        if (foundationIndex >= 0)
         {  
-            if (foundationTopCard == nullptr)
+            auto uTargetIndex = static_cast<uint8_t>(foundationIndex);
+
+            if (!foundationTopCard)
             {
-                _moves.push({*deck_card, std::nullopt, foundationIndex});
+                _moves.push({*deck_card, std::nullopt, uTargetIndex, card_state::foundation});
                 _foundations.at(foundationIndex) = deck_card;
             }
             else
             {
-                _moves.push({*deck_card, *foundationTopCard, foundationIndex});
+                _moves.push({*deck_card, *foundationTopCard, uTargetIndex, card_state::foundation});
                 foundationTopCard->set_child(deck_card);
             }
 
@@ -271,6 +276,22 @@ void game::move_deck_to_foundation()
     }
 }
 
+void game::undo_move()
+{
+    if (!_moves.empty())
+    {
+        auto& last_move = _moves.top();
+        _moves.pop();
+
+        if (last_move.moved.get_state() == card_state::deck)
+        {
+            if (last_move.target_state == card_state::foundation)
+                undo_deck_to_foundation(last_move);
+            else if (last_move.target_state == card_state::tableau)
+                undo_deck_to_tableau(last_move);
+        }
+    }
+}
 
 void game::clear_board()
 {
@@ -290,6 +311,60 @@ void game::clear_board()
     {
         card->set_state(card_state::undefined);
         card->set_visibility(false);
+    }
+}
+
+void game::undo_deck_to_foundation(const move &move)
+{
+    if (_foundations[move.columnIndex])
+    {
+        auto topFoundation = get_top_card(_foundations[move.columnIndex]);
+        auto topFoundationParent = _foundations[move.columnIndex];
+        while (topFoundationParent != topFoundation)
+        {
+            topFoundationParent = topFoundationParent->get_child();
+        }
+
+        if (topFoundationParent)
+        {
+            topFoundationParent->set_child(nullptr);
+        }
+        if (topFoundation == _foundations[move.columnIndex])
+        {
+            _foundations[move.columnIndex] = nullptr;
+        }
+
+        topFoundation->set_state(card_state::deck);
+        topFoundation->set_visibility(false);
+
+        _deck.push_back(topFoundation);
+    }
+}
+
+void game::undo_deck_to_tableau(const move &move)
+{
+    if (_tableaus[move.columnIndex])
+    {
+        auto topTableau = get_top_card(_tableaus[move.columnIndex]);
+        auto topTableauParent = _tableaus[move.columnIndex];
+        while (topTableauParent && topTableauParent->get_child() != topTableau)
+        {
+            topTableauParent = topTableauParent->get_child();
+        }
+
+        if (topTableauParent)
+        {
+            topTableauParent->set_child(nullptr);
+        }
+        if (topTableau == _tableaus[move.columnIndex])
+        {
+            _tableaus[move.columnIndex] = nullptr;
+        }
+
+        topTableau->set_state(card_state::deck);
+        topTableau->set_visibility(false);
+
+        _deck.push_back(topTableau);
     }
 }
 
