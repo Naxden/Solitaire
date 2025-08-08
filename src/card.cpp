@@ -7,6 +7,27 @@ card::card(card_suit suit, card_value value)
     std::cout << "Parametrized card constructor has been called" << std::endl;
 }
 
+card::card(const card& other)
+        : _suite(other._suite),
+          _value(other._value),
+          _state(other._state),
+          _isVisible(other._isVisible),
+          _child(nullptr)
+{}
+
+card& card::operator=(const card& other)
+{
+    if (this != &other)
+        {
+            _suite = other._suite;
+            _value = other._value;
+            _state = other._state;
+            _isVisible = other._isVisible;
+            _child = nullptr;
+        }
+    return *this;
+}
+
 card::~card()
 {
     std::cout << "Card destructor has been called" << std::endl;

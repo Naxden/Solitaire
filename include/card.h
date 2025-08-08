@@ -52,6 +52,8 @@ class card
 {
 public:
     card(card_suit suit, card_value value);
+    card(const card& other);
+    card& operator=(const card& other);
     ~card();
     
     void set_state(card_state newState) { _state = newState; }

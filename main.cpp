@@ -27,6 +27,10 @@ int main(int, char**){
         {
             game.move_deck_to_foundation();
         }
+        else if (command == "tf")
+        {
+            game.move_tableau_to_foundation();
+        }
 
     }
 }

@@ -24,6 +24,7 @@ public:
 
     void move_deck_to_tableau();
     void move_deck_to_foundation();
+    void move_tableau_to_foundation();
     void undo_move();
     
     private:
@@ -31,6 +32,7 @@ public:
     void clear_board();
     void undo_deck_to_foundation(const move& move);
     void undo_deck_to_tableau(const move& move);
+    void undo_tableau_to_foundation(const move& move);
     std::vector<std::shared_ptr<card>> _cards;
 
     std::shared_ptr<card> get_top_card(const std::shared_ptr<card> head) const;
