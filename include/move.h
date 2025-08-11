@@ -1,13 +1,14 @@
 #pragma once
-#include <optional>
+#include <pile.h>
 #include "card.h"
 
 struct move
 {
-    card moved;
-    uint8_t moved_column_index;
-    std::optional<card> target;
-    uint8_t target_column_index;
-    card_state target_state;
+    card* moved_card = nullptr;
+
+    pile* from_pile = nullptr;
+    pile* to_pile = nullptr;
+
+    card* prev_parent = nullptr;
     bool revealed_card = false;
 };

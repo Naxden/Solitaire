@@ -7,18 +7,26 @@
 
 game::game()
 {
-    _cards.reserve(COLOR_COUNT * VALUE_COUNT);
-
+    // Initialize all cards in the array
     for (uint8_t suite = 0; suite < COLOR_COUNT; suite++)
     {
         for (uint8_t value = 1; value <= VALUE_COUNT; value++)
         {
-            _cards.emplace_back(
-                std::make_shared<card>(
-                    static_cast<card_suit>(suite),
-                    static_cast<card_value>(value)
-            ));
+            _cards[suite * VALUE_COUNT + (value - 1)] = card(
+                static_cast<card_suit>(suite),
+                static_cast<card_value>(value)
+            );
         }
+    }
+
+    for (uint8_t t = 0; t < TABLEAU_COUNT; t++)
+    {
+        _tableaus[t] = {pile_type::tableau, t};
+    }
+
+    for (uint8_t f = 0; f < FOUNDATION_COUNT; f++)
+    {
+        _foundations[f] = {pile_type::foundation, f};
     }
 }
 
@@ -27,7 +35,7 @@ void game::print_cards() const
     std::cout << "-----Cards------" << std::endl;
     for (const auto& card : _cards)
     {
-        print_card(*card);
+        print_card(card);
     }
 
 }
@@ -37,13 +45,13 @@ void game::print_board() const
     std::cout << "-----Tableau------" << std::endl;
     for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
     {
-        const auto& tableau = _tableaus.at(tIndex);
+        const auto& tableau = _tableaus[tIndex];
         std::cout << std::format("Tableau{} has: {} cards. Top: ", tIndex, 
-            get_column_height(tableau));
-
-        if (tableau)
+            tableau.get_height());
+        
+        if (!tableau.empty())
         {
-            print_card(*get_top_card(tableau));
+            print_card(*tableau.get_last());
         }
         else
         {
@@ -56,11 +64,11 @@ void game::print_board() const
     {
         const auto& foundation = _foundations.at(fIndex);
         std::cout << std::format("Foundation{} has: {} cards. Top: ",
-        fIndex, get_column_height(foundation));
+        fIndex, foundation.get_height());
 
-        if (foundation)
+        if (!foundation.empty())
         {
-            print_card(*get_top_card(foundation));
+            print_card(*foundation.get_last());
         }
         else
         {
@@ -93,7 +101,7 @@ void game::shuffle_deck()
 
 void game::new_game()
 {
-    clear_board();
+    reset_board();
 
     shuffle_deck();
 
@@ -102,36 +110,36 @@ void game::new_game()
         _moves.pop();
     }
 
-    int usedCardIndex = 0;
-    for (int tableauIndex = 0; tableauIndex < TABLEAU_COUNT; tableauIndex++)
+    uint8_t usedCardIndex = 0;
+    for (uint8_t tableauIndex = 0; tableauIndex < TABLEAU_COUNT; tableauIndex++)
     {
-        auto& tableau = _tableaus.at(tableauIndex);
+        auto& tableau = _tableaus[tableauIndex];
 
-        for (int tableuCards = 0; tableuCards <= tableauIndex; tableuCards++)
+        for (uint8_t tableuCards = 0; tableuCards <= tableauIndex; tableuCards++)
         {
-            auto& card = _cards.at(usedCardIndex);
+            auto& card = _cards[usedCardIndex++];
 
-            card->set_state(card_state::tableau);
-            if (tableau == nullptr)
+            card.owner = &tableau;
+
+            if (!tableau.empty())
             {
-                tableau = card;
+                tableau.get_last()->next = &card;
             }
             else
             {
-                get_top_card(tableau)->set_child(card);
+                tableau.first = &card;
             }
-            usedCardIndex++;
         }
 
-        get_top_card(tableau)->set_visibility(true);
+        tableau.get_last()->set_face_up(true);
     }
 
-    for (; usedCardIndex < COLOR_COUNT * VALUE_COUNT; usedCardIndex++)
+    while (usedCardIndex < CARDS_COUNT)
     {
-        auto& card = _cards.at(usedCardIndex);
+        auto& card = _cards[usedCardIndex++];
 
-        card->set_state(card_state::deck);
-        _deck.push_back(card);
+        card.owner = &_deck_pile;
+        _deck.push_back(&card);
     }
 
     _deckIndex = -1;
@@ -151,7 +159,7 @@ void game::next_deck()
         {
             if (is_deckIndex_valid())
             {
-                _deck[_deckIndex]->set_visibility(false);
+                _deck[_deckIndex]->set_face_up(false);
             }
 
             // loop index in range [-1, _deck.size()) 
@@ -160,7 +168,7 @@ void game::next_deck()
 
         if (is_deckIndex_valid())
         {
-            _deck[_deckIndex]->set_visibility(true);
+            _deck[_deckIndex]->set_face_up(true);
         }
     }
 }
@@ -169,27 +177,27 @@ void game::move_deck_to_tableau()
 {
     if (is_deckIndex_valid())
     {
-        const auto& deck_card = _deck[_deckIndex];
+        const auto deck_card = _deck[_deckIndex];
         int targetIndex = -1;
-        std::shared_ptr<card> targetTop = nullptr;
+        card* targetTop = nullptr;
 
-        for (uint8_t i = 0; i < TABLEAU_COUNT; ++i)
+        for (uint8_t t = 0; t < TABLEAU_COUNT; t++)
         {
-            auto& tableau = _tableaus[i];
-            if (!tableau)
+            auto& tableau = _tableaus[t];
+            if (tableau.empty())
             {
                 if (deck_card->get_value() == card_value::King)
                 {
-                    targetIndex = i;
+                    targetIndex = t;
                     break;
                 }
             }
             else
             {
-                auto top = get_top_card(tableau);
-                if (top->can_be_placed_on(*deck_card))
+                auto top = tableau.get_last();
+                if (top->is_valid_placement(*deck_card))
                 {
-                    targetIndex = i;
+                    targetIndex = t;
                     targetTop = top;
                     break;
                 }
@@ -199,22 +207,22 @@ void game::move_deck_to_tableau()
         if (targetIndex >= 0)
         {
             auto uTargetIndex = static_cast<uint8_t>(targetIndex);
-            auto uDeckIndex = static_cast<uint8_t>(_deckIndex);
-
+            auto& targetTableau = _tableaus[uTargetIndex];
+            move newMove = {deck_card, &_deck_pile, &targetTableau};
+            
             if (!targetTop)
             {
-                _moves.push({*deck_card, uDeckIndex, std::nullopt,
-                    uTargetIndex, card_state::tableau});
-                _tableaus[targetIndex] = deck_card;
+                targetTableau.first = deck_card;
+                deck_card->next = nullptr;
             }
             else
             {
-                _moves.push({*deck_card, uDeckIndex, *targetTop,
-                    uTargetIndex, card_state::tableau});
-                targetTop->set_child(deck_card);
+                targetTop->next = deck_card;
             }
-        
-            deck_card->set_state(card_state::tableau);
+
+            deck_card->owner = &targetTableau;
+
+            _moves.push(newMove);
 
             _deck.erase(_deck.begin() + _deckIndex);
             _pickedDeckIndex = _deckIndex;
@@ -229,13 +237,13 @@ void game::move_deck_to_foundation()
     {
         const auto& deck_card = _deck[_deckIndex];
         
-        std::shared_ptr<card> foundationTopCard = nullptr;
         int foundationIndex = -1;
+        card* targetTop = nullptr;
 
         for (uint8_t i = 0; i < FOUNDATION_COUNT; ++i)
         {
             auto& foundation = _foundations[i];
-            if (!foundation)
+            if (foundation.empty())
             {
                 if (deck_card->get_value() == card_value::Ace)
                 {
@@ -245,11 +253,11 @@ void game::move_deck_to_foundation()
             }
             else
             {
-                auto top = get_top_card(foundation);
-                if (top->can_be_placed_on(*deck_card))
+                auto top = foundation.get_last();
+                if (top->is_valid_placement(*deck_card))
                 {
                     foundationIndex = i;
-                    foundationTopCard = top;
+                    targetTop = top;
                     break;
                 }
             }
@@ -258,22 +266,22 @@ void game::move_deck_to_foundation()
         if (foundationIndex >= 0)
         {  
             auto uTargetIndex = static_cast<uint8_t>(foundationIndex);
-            auto uDeckIndex = static_cast<uint8_t>(_deckIndex);
-
-            if (!foundationTopCard)
+            auto& targetFoundation = _foundations[uTargetIndex];
+            move newMove = {deck_card, &_deck_pile, &targetFoundation};
+            
+            if (!targetTop)
             {
-                _moves.push({*deck_card, uDeckIndex, std::nullopt,
-                    uTargetIndex, card_state::foundation});
-                _foundations.at(foundationIndex) = deck_card;
+                targetFoundation.first = deck_card;
+                deck_card->next = nullptr;
             }
             else
             {
-                _moves.push({*deck_card, uDeckIndex, *foundationTopCard,
-                    uTargetIndex, card_state::foundation});
-                foundationTopCard->set_child(deck_card);
+                targetTop->next = deck_card;
             }
 
-            deck_card->set_state(card_state::foundation);
+            deck_card->owner = &targetFoundation;
+
+            _moves.push(newMove);
 
             _deck.erase(_deck.begin() + _deckIndex);
             _pickedDeckIndex = _deckIndex;
@@ -290,15 +298,15 @@ void game::move_tableau_to_foundation()
     
     for (uint8_t t = 0; t < TABLEAU_COUNT && !found; t++)
     {
-        const auto& tableauCard = get_top_card(_tableaus[t]);
+        const auto tableauCard = _tableaus[t].get_last();
 
         if (tableauCard)
         {
             for (uint8_t f = 0; f < FOUNDATION_COUNT && !found; f++)
             {
-                const auto& foundationCard = get_top_card(_foundations[f]);
+                const auto foundationCard = _foundations[f].get_last();
                 if ((tableauCard->get_value() == card_value::Ace && !foundationCard) ||
-                    (foundationCard && foundationCard->can_be_placed_on(*tableauCard)))
+                    (foundationCard && foundationCard->is_valid_placement(*tableauCard)))
                 {
                     foundationIndex = f;
                     tableauIndex = t;
@@ -310,40 +318,43 @@ void game::move_tableau_to_foundation()
 
     if (found)
     {
-        auto tableauCard = get_top_card(_tableaus[tableauIndex]);
-        auto tableauCardParent = _tableaus[tableauIndex];
-        auto foundationCard = get_top_card(_foundations[foundationIndex]);
+        auto& tableau = _tableaus[tableauIndex];
+        auto& foundation = _foundations[foundationIndex];
+        auto tableauCard = tableau.get_last();
+        auto foundationCard = foundation.get_last();
         
+        move newMove = {tableauCard, &tableau, &foundation};
         if (!foundationCard)
         {
-            _moves.push({*tableauCard, tableauIndex, std::nullopt,
-                foundationIndex, card_state::foundation});
-            _foundations[foundationIndex] = tableauCard;
+            foundation.first = tableauCard;
         }
         else
         {
-            _moves.push({*tableauCard, tableauIndex, *foundationCard,
-                foundationIndex, card_state::foundation});
-            foundationCard->set_child(tableauCard);
+            foundationCard->next = tableauCard;
         }
 
-        if (tableauCardParent == tableauCard)
+        if (tableau.get_first() == tableauCard)
         {
-            _tableaus[tableauIndex] = nullptr;
+            tableau.first = nullptr;
         }
         else
         {
-            while (tableauCardParent->get_child() != tableauCard)
+            auto tableauCardParent = tableauCard->get_parent();
+            if (tableauCardParent)
             {
-                tableauCardParent = tableauCardParent->get_child();
+                tableauCardParent->next = nullptr;
+                newMove.prev_parent = tableauCardParent;
+                
+                if (!tableauCardParent->is_face_up())
+                {
+                    tableauCardParent->set_face_up(true);
+                    newMove.revealed_card = true;
+                }
             }
-
-            tableauCardParent->set_child(nullptr);
-            tableauCardParent->set_visibility(true);
-            _moves.top().revealed_card = true;
         }
 
-        tableauCard->set_state(card_state::foundation);
+        tableauCard->owner = &foundation;
+        _moves.push(newMove);
     }
 }
 
@@ -354,171 +365,64 @@ void game::undo_move()
         auto& last_move = _moves.top();
         _moves.pop();
 
-        if (last_move.moved.get_state() == card_state::deck)
+        auto moved_card = last_move.moved_card;
+        auto from_pile = last_move.from_pile; 
+        auto to_pile = last_move.to_pile;
+
+        if (last_move.prev_parent)
         {
-            if (last_move.target_state == card_state::foundation)
-                undo_deck_to_foundation(last_move);
-            else if (last_move.target_state == card_state::tableau)
-                undo_deck_to_tableau(last_move);
+            last_move.prev_parent->next = moved_card;
+
+            if (last_move.revealed_card)
+            {
+                last_move.prev_parent->set_face_up(false);
+            }
         }
-        else if (last_move.moved.get_state() == card_state::tableau)
+
+        auto to_pile_parent = moved_card->get_parent();
+        if (to_pile_parent)
         {
-            if (last_move.target_state == card_state::foundation)
-                undo_tableau_to_foundation(last_move);
+            to_pile_parent->next = nullptr;
+        }
+        if (to_pile->get_first() == moved_card)
+        {
+            to_pile->first = nullptr;
+        }
+
+        moved_card->owner = from_pile;
+        // TODO handle this situation
+        if (from_pile->type == pile_type::deck)
+        {
+            _deck.push_back(moved_card);
+            return;
+        }
+        if (from_pile->empty())
+        {
+            from_pile->first = moved_card;
         }
     }
 }
 
-void game::clear_board()
+void game::reset_board()
 {
     for (auto& tColumn : _tableaus)
     {
-        clear_column(tColumn);
+        tColumn.first = nullptr;
     }
     
     for (auto& fColumn : _foundations)
     {
-        clear_column(fColumn);
+        fColumn.first = nullptr;
     }
 
     _deck.clear();
 
-    for (auto& card : _cards)
+    for (auto &card : _cards)
     {
-        card->set_state(card_state::undefined);
-        card->set_visibility(false);
+        card.next = nullptr;
+        card.owner = nullptr;
+        card.set_face_up(false);
     }
-}
-
-void game::undo_deck_to_foundation(const move &move)
-{
-    if (_foundations[move.target_column_index])
-    {
-        auto topFoundation = get_top_card(_foundations[move.target_column_index]);
-        auto topFoundationParent = _foundations[move.target_column_index];
-        while (topFoundationParent != topFoundation)
-        {
-            topFoundationParent = topFoundationParent->get_child();
-        }
-
-        if (topFoundationParent)
-        {
-            topFoundationParent->set_child(nullptr);
-        }
-        if (topFoundation == _foundations[move.target_column_index])
-        {
-            _foundations[move.target_column_index] = nullptr;
-        }
-
-        topFoundation->set_state(card_state::deck);
-        topFoundation->set_visibility(false);
-
-        _deck.push_back(topFoundation);
-    }
-}
-
-void game::undo_deck_to_tableau(const move &move)
-{
-    if (_tableaus[move.target_column_index])
-    {
-        auto topTableau = get_top_card(_tableaus[move.target_column_index]);
-        auto topTableauParent = _tableaus[move.target_column_index];
-        while (topTableauParent && topTableauParent->get_child() != topTableau)
-        {
-            topTableauParent = topTableauParent->get_child();
-        }
-
-        if (topTableauParent)
-        {
-            topTableauParent->set_child(nullptr);
-        }
-        if (topTableau == _tableaus[move.target_column_index])
-        {
-            _tableaus[move.target_column_index] = nullptr;
-        }
-
-        topTableau->set_state(card_state::deck);
-        topTableau->set_visibility(false);
-
-        _deck.push_back(topTableau);
-    }
-}
-
-void game::undo_tableau_to_foundation(const move &move)
-{
-    auto foundationTop = get_top_card(_foundations[move.target_column_index]);
-    foundationTop->set_state(card_state::tableau);
-
-    if (move.target.has_value())
-    {
-        auto foundationTopParent = _foundations[move.target_column_index];
-        while (foundationTopParent->get_child() != foundationTop)
-        {
-            foundationTopParent = foundationTopParent->get_child();
-        }
-
-        foundationTopParent->set_child(nullptr);
-    }
-    else
-    {
-        _foundations[move.target_column_index] = nullptr;
-    }
-
-    auto tableauTop = get_top_card(_tableaus[move.moved_column_index]);
-    
-    if (move.revealed_card)
-    {
-        tableauTop->set_visibility(false);
-        tableauTop->set_child(foundationTop);
-    }
-    else
-    {
-        if (tableauTop)
-        {
-            tableauTop->set_child(foundationTop);
-        }
-        else
-        {
-            _tableaus[move.moved_column_index] = foundationTop;
-        }
-    }
-}
-
-std::shared_ptr<card> game::get_top_card(const std::shared_ptr<card> head) const
-{
-    auto current = head;
-    while (current && current->get_child())
-    {
-        current = current->get_child();
-    }
-
-    return current;
-}
-
-uint8_t game::get_column_height(const std::shared_ptr<card> head) const
-{
-    uint8_t height = 0;
-    auto current = head;
-    while (current && current->get_child())
-    {
-        current = current->get_child();
-        height++;
-    }
-
-    return height;
-}
-
-void game::clear_column(std::shared_ptr<card>& head)
-{
-    auto current = head;
-    while (current)
-    {
-        auto child = current->get_child();
-        current->set_child(nullptr);
-        current = child;
-    }
-
-    head = nullptr;
 }
 
 bool game::is_deckIndex_valid() const

@@ -34,14 +34,13 @@ inline const char* toString(card_value value)
     }
 }
 
-inline const char* toString(card_state state)
+inline const char* toString(pile_type state)
 {
     switch (state) {
-        case card_state::undefined:   return "Undefined";
-        case card_state::deck:        return "Deck";
-        case card_state::tableau:     return "Tableau";
-        case card_state::foundation:  return "Foundation";
-        case card_state::hand:        return "Hand";
+        case pile_type::undefined:   return "Undefined";
+        case pile_type::deck:        return "Deck";
+        case pile_type::tableau:     return "Tableau";
+        case pile_type::foundation:  return "Foundation";
         default:                      return "Unknown";
     }
 }
@@ -51,6 +50,6 @@ inline void print_card(const card& card)
     std::cout << std::format("{} {} {}",
         toString(card.get_suit()),
         toString(card.get_value()),
-        card.is_visible() ? "Visible" : "Hidden")
+        card.is_face_up() ? "Visible" : "Hidden")
         << std::endl;
 }

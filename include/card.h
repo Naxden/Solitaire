@@ -1,5 +1,6 @@
 #pragma once
-#include <memory>
+#include <cstdint>
+#include "pile.h"
 
 enum class card_suit : uint8_t
 {
@@ -34,44 +35,29 @@ enum class card_value : uint8_t
     King = 13,
 };
 
-enum class card_state : uint8_t
-{
-    /// Undefined or initial state
-    undefined,
-    /// Card is in the deck (stock)
-    deck,
-    /// Card is in the tableau (on the table)
-    tableau,
-    /// Card is in the foundation (goal piles)
-    foundation,
-    /// Card is currently held/moved by the player
-    hand,
-};
-
 class card
 {
 public:
-    card(card_suit suit, card_value value);
-    card(const card& other);
-    card& operator=(const card& other);
-    ~card();
-    
-    void set_state(card_state newState) { _state = newState; }
-    void set_visibility(bool isVisible) { _isVisible = isVisible; }
-    bool can_be_placed_on(const card& other) const;
+    card() = default;
+    constexpr card(card_suit s, card_value v) noexcept
+        : _suite(s), _value(v) {}
 
-    // Public getters
-    card_suit get_suit() const { return _suite; }
-    card_value get_value() const { return _value; }
-    card_state get_state() const { return _state; }
-    bool is_visible() const { return _isVisible; }
-    std::shared_ptr<card> get_child() const { return _child; }
-    void set_child(std::shared_ptr<card> otherCard) { _child = otherCard; }
+    card(const card&) = default;
+    card& operator=(const card&) = default;
+
+    constexpr card_suit get_suit() const noexcept { return _suite; }
+    constexpr card_value get_value() const noexcept { return _value; }
+    bool is_face_up() const noexcept { return _face_up; }
+    void set_face_up(bool f) noexcept { _face_up = f; }
+
+    bool is_valid_placement(const card& other) const;
+    card* get_parent() const noexcept;
+public:
+    card* next = nullptr;
+    pile* owner = nullptr;
 
 private:
     card_suit _suite;
     card_value _value;
-    card_state _state;
-    bool _isVisible = false;
-    std::shared_ptr<card> _child = nullptr;
+    bool _face_up = false;
 };
