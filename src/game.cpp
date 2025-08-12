@@ -78,10 +78,10 @@ void game::print_board() const
 
     std::cout << "-----Deck------" << std::endl;
     std::cout << std::format("Deck has: {} cards. Index {}. Current card: ",
-        _deck.size(), _deckIndex);
-    if (is_deckIndex_valid())
+        _deck.get_height(), _deck.get_position_in_pile(_current_deck));
+    if (_current_deck)
     {
-        print_card(*_deck[_deckIndex]);   
+        print_card(*_current_deck);   
     }
     else
     {
@@ -134,50 +134,61 @@ void game::new_game()
         tableau.get_last()->set_face_up(true);
     }
 
+    auto deck_last = _deck.get_last();
     while (usedCardIndex < CARDS_COUNT)
     {
         auto& card = _cards[usedCardIndex++];
 
-        card.owner = &_deck_pile;
-        _deck.push_back(&card);
+        card.owner = &_deck;
+        if (_deck.empty())
+        {
+            _deck.first = &card;
+        }
+        else if (deck_last)
+        {
+            deck_last->next = &card;
+        }
+
+        deck_last = &card;
     }
 
-    _deckIndex = -1;
-    _pickedDeckIndex = -1;
+    _current_deck = nullptr;
+    _picked_deck = nullptr;
 }
 
 void game::next_deck()
 {
     if (!_deck.empty())
     {
-        if (_pickedDeckIndex != -1)
+        if (_picked_deck)
         {
-            _deckIndex = _pickedDeckIndex;
-            _pickedDeckIndex = -1;
+            _current_deck = _picked_deck;
+            _picked_deck = nullptr;
         }
         else
         {
-            if (is_deckIndex_valid())
+            if (_current_deck)
             {
-                _deck[_deckIndex]->set_face_up(false);
+                _current_deck->set_face_up(false);
+                _current_deck = _current_deck->next;
             }
-
-            // loop index in range [-1, _deck.size()) 
-            _deckIndex = ((_deckIndex + 2) % (_deck.size() + 1)) - 1;
+            else
+            {
+                _current_deck = _deck.get_first();
+            }
         }
 
-        if (is_deckIndex_valid())
+        if (_current_deck)
         {
-            _deck[_deckIndex]->set_face_up(true);
+            _current_deck->set_face_up(true);
         }
     }
 }
 
 void game::move_deck_to_tableau()
 {
-    if (is_deckIndex_valid())
+    if (_current_deck)
     {
-        const auto deck_card = _deck[_deckIndex];
         int targetIndex = -1;
         card* targetTop = nullptr;
 
@@ -186,7 +197,7 @@ void game::move_deck_to_tableau()
             auto& tableau = _tableaus[t];
             if (tableau.empty())
             {
-                if (deck_card->get_value() == card_value::King)
+                if (_current_deck->get_value() == card_value::King)
                 {
                     targetIndex = t;
                     break;
@@ -195,7 +206,7 @@ void game::move_deck_to_tableau()
             else
             {
                 auto top = tableau.get_last();
-                if (top->is_valid_placement(*deck_card))
+                if (top->is_valid_placement(*_current_deck))
                 {
                     targetIndex = t;
                     targetTop = top;
@@ -208,35 +219,32 @@ void game::move_deck_to_tableau()
         {
             auto uTargetIndex = static_cast<uint8_t>(targetIndex);
             auto& targetTableau = _tableaus[uTargetIndex];
-            move newMove = {deck_card, &_deck_pile, &targetTableau};
             
             if (!targetTop)
             {
-                targetTableau.first = deck_card;
-                deck_card->next = nullptr;
+                targetTableau.first = _current_deck;
             }
             else
             {
-                targetTop->next = deck_card;
+                targetTop->next = _current_deck;
             }
 
-            deck_card->owner = &targetTableau;
+            _current_deck->owner = &targetTableau;
 
-            _moves.push(newMove);
+            _moves.push({_current_deck, &_deck, &targetTableau});
 
-            _deck.erase(_deck.begin() + _deckIndex);
-            _pickedDeckIndex = _deckIndex;
-            _deckIndex = -1;
+            _picked_deck = _current_deck->next;
+            _deck.erase_from_pile(_current_deck);
+            _current_deck->next = nullptr;
+            _current_deck = nullptr;
         }
     }
 }
 
 void game::move_deck_to_foundation()
 {
-    if (is_deckIndex_valid())
+    if (_current_deck)
     {
-        const auto& deck_card = _deck[_deckIndex];
-        
         int foundationIndex = -1;
         card* targetTop = nullptr;
 
@@ -245,7 +253,7 @@ void game::move_deck_to_foundation()
             auto& foundation = _foundations[i];
             if (foundation.empty())
             {
-                if (deck_card->get_value() == card_value::Ace)
+                if (_current_deck->get_value() == card_value::Ace)
                 {
                     foundationIndex = i;
                     break;
@@ -254,7 +262,7 @@ void game::move_deck_to_foundation()
             else
             {
                 auto top = foundation.get_last();
-                if (top->is_valid_placement(*deck_card))
+                if (top->is_valid_placement(*_current_deck))
                 {
                     foundationIndex = i;
                     targetTop = top;
@@ -267,25 +275,24 @@ void game::move_deck_to_foundation()
         {  
             auto uTargetIndex = static_cast<uint8_t>(foundationIndex);
             auto& targetFoundation = _foundations[uTargetIndex];
-            move newMove = {deck_card, &_deck_pile, &targetFoundation};
             
             if (!targetTop)
             {
-                targetFoundation.first = deck_card;
-                deck_card->next = nullptr;
+                targetFoundation.first = _current_deck;
             }
             else
             {
-                targetTop->next = deck_card;
+                targetTop->next = _current_deck;
             }
 
-            deck_card->owner = &targetFoundation;
+            _current_deck->owner = &targetFoundation;
 
-            _moves.push(newMove);
+            _moves.push({_current_deck, &_deck, &targetFoundation});
 
-            _deck.erase(_deck.begin() + _deckIndex);
-            _pickedDeckIndex = _deckIndex;
-            _deckIndex = -1;
+            _picked_deck = _current_deck->next;
+            _deck.erase_from_pile(_current_deck);
+            _current_deck->next = nullptr;
+            _current_deck = nullptr;
         }
     }
 }
@@ -390,15 +397,13 @@ void game::undo_move()
         }
 
         moved_card->owner = from_pile;
-        // TODO handle this situation
-        if (from_pile->type == pile_type::deck)
-        {
-            _deck.push_back(moved_card);
-            return;
-        }
         if (from_pile->empty())
         {
             from_pile->first = moved_card;
+        }
+        else if (from_pile->type == pile_type::deck)
+        {
+            from_pile->get_last()->next = moved_card;   
         }
     }
 }
@@ -415,7 +420,7 @@ void game::reset_board()
         fColumn.first = nullptr;
     }
 
-    _deck.clear();
+    _deck.first = nullptr;
 
     for (auto &card : _cards)
     {
@@ -423,10 +428,4 @@ void game::reset_board()
         card.owner = nullptr;
         card.set_face_up(false);
     }
-}
-
-bool game::is_deckIndex_valid() const
-{
-    return !_deck.empty() && _deckIndex >= 0 && 
-        _deckIndex < static_cast<int8_t>(_deck.size());
 }

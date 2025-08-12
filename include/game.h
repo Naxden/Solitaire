@@ -30,15 +30,12 @@ public:
 private:
     void shuffle_deck();
     void reset_board();
-    bool is_deckIndex_valid() const;
 private:
     std::array<card, CARDS_COUNT> _cards;
     std::array<pile, TABLEAU_COUNT> _tableaus;
     std::array<pile, FOUNDATION_COUNT> _foundations;
-    std::vector<card*> _deck;
-    pile _deck_pile { pile_type::deck, 0};
-    
-    int8_t _deckIndex = -1;
-    int8_t _pickedDeckIndex = -1;
+    pile _deck { pile_type::deck, 0};
+    card* _current_deck = nullptr;
+    card* _picked_deck = nullptr;
     std::stack<move> _moves;
 };
