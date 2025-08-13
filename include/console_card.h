@@ -50,6 +50,6 @@ inline void print_card(const card& card)
     std::cout << std::format("{} {} {}",
         toString(card.get_suit()),
         toString(card.get_value()),
-        card.is_face_up() ? "Visible" : "Hidden")
+        card.face_up ? "Visible" : "Hidden")
         << std::endl;
 }

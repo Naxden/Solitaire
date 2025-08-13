@@ -25,6 +25,8 @@ public:
     void move_deck_to_tableau();
     void move_deck_to_foundation();
     void move_tableau_to_foundation();
+    void move_tableau_to_tableau(uint8_t from, uint8_t to);
+    void move_card(card* moved, pile& target);
     void undo_move();
     
 private:

@@ -131,7 +131,7 @@ void game::new_game()
             }
         }
 
-        tableau.get_last()->set_face_up(true);
+        tableau.get_last()->face_up = true;
     }
 
     auto deck_last = _deck.get_last();
@@ -169,7 +169,7 @@ void game::next_deck()
         {
             if (_current_deck)
             {
-                _current_deck->set_face_up(false);
+                _current_deck->face_up = false;
                 _current_deck = _current_deck->next;
             }
             else
@@ -180,7 +180,7 @@ void game::next_deck()
 
         if (_current_deck)
         {
-            _current_deck->set_face_up(true);
+            _current_deck->face_up = true;
         }
     }
 }
@@ -352,9 +352,9 @@ void game::move_tableau_to_foundation()
                 tableauCardParent->next = nullptr;
                 newMove.prev_parent = tableauCardParent;
                 
-                if (!tableauCardParent->is_face_up())
+                if (!tableauCardParent->face_up)
                 {
-                    tableauCardParent->set_face_up(true);
+                    tableauCardParent->face_up = true;
                     newMove.revealed_card = true;
                 }
             }
@@ -362,6 +362,71 @@ void game::move_tableau_to_foundation()
 
         tableauCard->owner = &foundation;
         _moves.push(newMove);
+    }
+}
+
+void game::move_tableau_to_tableau(uint8_t from, uint8_t to)
+{
+    if (from >= 0 && from < TABLEAU_COUNT &&
+        to >= 0 && to < TABLEAU_COUNT &&
+        from != to)
+    {
+        move_card(
+            _tableaus[from].get_last(),
+            _tableaus[to]
+        );
+    }
+}
+
+void game::move_card(card* moved, pile& target)
+{
+    if (moved)
+    {
+        auto moved_parent = moved->get_parent();
+        bool valid_target = false;
+        if (target.empty())
+        {
+            if (moved->get_value() == card_value::King)
+            {
+                target.first = moved;
+                valid_target = true;
+            }
+        }
+        else
+        {
+            auto target_card = target.get_last();
+            if (target_card->is_valid_placement(*moved))
+            {
+                target_card->next = moved;
+                valid_target = true;
+            }
+        }
+        
+        if (valid_target)
+        {
+            move newMove = {moved, moved->owner, &target};
+            auto traverser = moved;
+            while (traverser)
+            {
+                traverser->owner = &target;
+                traverser = traverser->next;
+            }
+
+            if (moved_parent)
+            {
+                newMove.prev_parent = moved_parent;
+
+                moved_parent->next = nullptr;
+
+                if (!moved_parent->face_up)
+                {
+                    moved_parent->face_up = true;
+                    newMove.revealed_card = true;
+                }
+            }
+
+            _moves.push(newMove);
+        }
     }
 }
 
@@ -382,7 +447,7 @@ void game::undo_move()
 
             if (last_move.revealed_card)
             {
-                last_move.prev_parent->set_face_up(false);
+                last_move.prev_parent->face_up = false;
             }
         }
 
@@ -396,7 +461,13 @@ void game::undo_move()
             to_pile->first = nullptr;
         }
 
-        moved_card->owner = from_pile;
+        auto traverser = moved_card;
+        while (traverser)
+        {
+            traverser->owner = from_pile;
+            traverser = traverser->next;
+        }
+        
         if (from_pile->empty())
         {
             from_pile->first = moved_card;
@@ -426,6 +497,6 @@ void game::reset_board()
     {
         card.next = nullptr;
         card.owner = nullptr;
-        card.set_face_up(false);
+        card.face_up = false;
     }
 }

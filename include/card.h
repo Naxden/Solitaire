@@ -47,17 +47,14 @@ public:
 
     constexpr card_suit get_suit() const noexcept { return _suite; }
     constexpr card_value get_value() const noexcept { return _value; }
-    bool is_face_up() const noexcept { return _face_up; }
-    void set_face_up(bool f) noexcept { _face_up = f; }
-
+    
     bool is_valid_placement(const card& other) const;
     card* get_parent() const noexcept;
 public:
     card* next = nullptr;
     pile* owner = nullptr;
-
+    bool face_up = false;
 private:
     card_suit _suite;
     card_value _value;
-    bool _face_up = false;
 };
