@@ -30,7 +30,7 @@ card* pile::get_last() const noexcept
 int8_t pile::get_position_in_pile(card *c) const noexcept
 {
     int8_t index = 0;
-    for (auto card = first; card; card = card->next, ++index)
+    for (auto card = first; card; card = card->next, index++)
     {
         if (card == c)
             return index;
@@ -38,7 +38,7 @@ int8_t pile::get_position_in_pile(card *c) const noexcept
     return -1;
 }
 
-void pile::erase_from_pile(card *c) noexcept
+void pile::erase_single_from_pile(card *c) noexcept
 {
     if (c && !empty())
     {
@@ -60,4 +60,47 @@ void pile::erase_from_pile(card *c) noexcept
             }
         }
     }
+}
+
+bool pile::is_valid_first_placement(card *c) const noexcept
+{
+    if (c && empty())
+    {
+        switch (type)
+        {
+        case pile_type::tableau:
+            return c->get_value() == card_value::King;
+        case pile_type::foundation:
+            return c->get_value() == card_value::Ace;
+        default:
+            break;
+        }
+    }
+    return false;
+}
+
+bool pile::try_assign_as_child(card *c) noexcept
+{   
+    if (c)
+    {
+        if (empty())
+        {
+            if (is_valid_first_placement(c))
+            {
+                first = c;
+                return true;
+            }
+        }
+        else
+        {
+            auto target_card = get_last();
+            if (target_card->is_valid_placement(*c))
+            {
+                target_card->next = c;
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

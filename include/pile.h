@@ -30,5 +30,7 @@ struct pile
     /// @param c card to be looked for
     /// @return position of the passed card, -1 if card is not found
     int8_t get_position_in_pile(card* c) const noexcept;
-    void erase_from_pile(card* c) noexcept;
+    void erase_single_from_pile(card* c) noexcept;
+    bool is_valid_first_placement(card* c) const noexcept;
+    bool try_assign_as_child(card* c) noexcept;
 };

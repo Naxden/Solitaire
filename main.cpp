@@ -50,6 +50,10 @@ int main(int, char**){
                     game.move_tableau_to_tableau(a, b);
             }
         }
+        else if (command == "p")
+        {
+            game.print_cards();
+        }
 
     }
 }

@@ -217,26 +217,10 @@ void game::move_deck_to_tableau()
 
         if (targetIndex >= 0)
         {
-            auto uTargetIndex = static_cast<uint8_t>(targetIndex);
-            auto& targetTableau = _tableaus[uTargetIndex];
-            
-            if (!targetTop)
-            {
-                targetTableau.first = _current_deck;
-            }
-            else
-            {
-                targetTop->next = _current_deck;
-            }
-
-            _current_deck->owner = &targetTableau;
-
-            _moves.push({_current_deck, &_deck, &targetTableau});
-
-            _picked_deck = _current_deck->next;
-            _deck.erase_from_pile(_current_deck);
-            _current_deck->next = nullptr;
-            _current_deck = nullptr;
+            move_card(
+                _current_deck,
+                _tableaus[targetIndex]
+            );
         }
     }
 }
@@ -248,7 +232,7 @@ void game::move_deck_to_foundation()
         int foundationIndex = -1;
         card* targetTop = nullptr;
 
-        for (uint8_t i = 0; i < FOUNDATION_COUNT; ++i)
+        for (uint8_t i = 0; i < FOUNDATION_COUNT; i++)
         {
             auto& foundation = _foundations[i];
             if (foundation.empty())
@@ -273,26 +257,10 @@ void game::move_deck_to_foundation()
 
         if (foundationIndex >= 0)
         {  
-            auto uTargetIndex = static_cast<uint8_t>(foundationIndex);
-            auto& targetFoundation = _foundations[uTargetIndex];
-            
-            if (!targetTop)
-            {
-                targetFoundation.first = _current_deck;
-            }
-            else
-            {
-                targetTop->next = _current_deck;
-            }
-
-            _current_deck->owner = &targetFoundation;
-
-            _moves.push({_current_deck, &_deck, &targetFoundation});
-
-            _picked_deck = _current_deck->next;
-            _deck.erase_from_pile(_current_deck);
-            _current_deck->next = nullptr;
-            _current_deck = nullptr;
+            move_card(
+                _current_deck,
+                _foundations[foundationIndex]
+            );
         }
     }
 }
@@ -325,43 +293,10 @@ void game::move_tableau_to_foundation()
 
     if (found)
     {
-        auto& tableau = _tableaus[tableauIndex];
-        auto& foundation = _foundations[foundationIndex];
-        auto tableauCard = tableau.get_last();
-        auto foundationCard = foundation.get_last();
-        
-        move newMove = {tableauCard, &tableau, &foundation};
-        if (!foundationCard)
-        {
-            foundation.first = tableauCard;
-        }
-        else
-        {
-            foundationCard->next = tableauCard;
-        }
-
-        if (tableau.get_first() == tableauCard)
-        {
-            tableau.first = nullptr;
-        }
-        else
-        {
-            auto tableauCardParent = tableauCard->get_parent();
-            if (tableauCardParent)
-            {
-                tableauCardParent->next = nullptr;
-                newMove.prev_parent = tableauCardParent;
-                
-                if (!tableauCardParent->face_up)
-                {
-                    tableauCardParent->face_up = true;
-                    newMove.revealed_card = true;
-                }
-            }
-        }
-
-        tableauCard->owner = &foundation;
-        _moves.push(newMove);
+        move_card(
+            _tableaus[tableauIndex].get_last(),
+            _foundations[foundationIndex]
+        );
     }
 }
 
@@ -383,39 +318,36 @@ void game::move_card(card* moved, pile& target)
     if (moved)
     {
         auto moved_parent = moved->get_parent();
-        bool valid_target = false;
-        if (target.empty())
-        {
-            if (moved->get_value() == card_value::King)
-            {
-                target.first = moved;
-                valid_target = true;
-            }
-        }
-        else
-        {
-            auto target_card = target.get_last();
-            if (target_card->is_valid_placement(*moved))
-            {
-                target_card->next = moved;
-                valid_target = true;
-            }
-        }
         
-        if (valid_target)
+        if (target.try_assign_as_child(moved))
         {
             move newMove = {moved, moved->owner, &target};
-            auto traverser = moved;
-            while (traverser)
+            bool is_from_deck = moved->owner->type == pile_type::deck;
+
+            if (!is_from_deck && 
+                moved->owner->get_first() == moved)
             {
-                traverser->owner = &target;
-                traverser = traverser->next;
+                moved->owner->first = nullptr;
+            }
+            {
+                auto traverser = moved;
+                do
+                {
+                    traverser->owner = &target;
+                    traverser = traverser->next;
+                } while (traverser && !is_from_deck);
             }
 
-            if (moved_parent)
+            newMove.prev_parent = moved_parent;
+            if (is_from_deck)
             {
-                newMove.prev_parent = moved_parent;
-
+                _picked_deck = _current_deck->next;
+                _deck.erase_single_from_pile(_current_deck);
+                _current_deck->next = nullptr;
+                _current_deck = nullptr;
+            }
+            else if (moved_parent)
+            {
                 moved_parent->next = nullptr;
 
                 if (!moved_parent->face_up)
@@ -440,15 +372,27 @@ void game::undo_move()
         auto moved_card = last_move.moved_card;
         auto from_pile = last_move.from_pile; 
         auto to_pile = last_move.to_pile;
+        auto prev_parent = last_move.prev_parent;
+        const auto is_from_deck = from_pile->type == pile_type::deck;
 
-        if (last_move.prev_parent)
+        if (prev_parent)
         {
-            last_move.prev_parent->next = moved_card;
+            if (is_from_deck)
+            {
+                moved_card->next = prev_parent->next;
+            }
+
+            prev_parent->next = moved_card;
 
             if (last_move.revealed_card)
             {
-                last_move.prev_parent->face_up = false;
+                prev_parent->face_up = false;
             }
+        }
+        else if (is_from_deck)
+        {
+            moved_card->next = from_pile->first;
+            from_pile->first = moved_card;
         }
 
         auto to_pile_parent = moved_card->get_parent();
@@ -467,28 +411,24 @@ void game::undo_move()
             traverser->owner = from_pile;
             traverser = traverser->next;
         }
-        
+
         if (from_pile->empty())
         {
             from_pile->first = moved_card;
-        }
-        else if (from_pile->type == pile_type::deck)
-        {
-            from_pile->get_last()->next = moved_card;   
         }
     }
 }
 
 void game::reset_board()
 {
-    for (auto& tColumn : _tableaus)
+    for (auto& tPile : _tableaus)
     {
-        tColumn.first = nullptr;
+        tPile.first = nullptr;
     }
     
-    for (auto& fColumn : _foundations)
+    for (auto& fPile : _foundations)
     {
-        fColumn.first = nullptr;
+        fPile.first = nullptr;
     }
 
     _deck.first = nullptr;
