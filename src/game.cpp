@@ -190,7 +190,6 @@ void game::move_deck_to_tableau()
     if (_current_deck)
     {
         int targetIndex = -1;
-        card* targetTop = nullptr;
 
         for (uint8_t t = 0; t < TABLEAU_COUNT; t++)
         {
@@ -209,7 +208,6 @@ void game::move_deck_to_tableau()
                 if (top->is_valid_placement(*_current_deck))
                 {
                     targetIndex = t;
-                    targetTop = top;
                     break;
                 }
             }
@@ -230,7 +228,6 @@ void game::move_deck_to_foundation()
     if (_current_deck)
     {
         int foundationIndex = -1;
-        card* targetTop = nullptr;
 
         for (uint8_t i = 0; i < FOUNDATION_COUNT; i++)
         {
@@ -249,7 +246,6 @@ void game::move_deck_to_foundation()
                 if (top->is_valid_placement(*_current_deck))
                 {
                     foundationIndex = i;
-                    targetTop = top;
                     break;
                 }
             }
@@ -302,8 +298,8 @@ void game::move_tableau_to_foundation()
 
 void game::move_tableau_to_tableau(uint8_t from, uint8_t to)
 {
-    if (from >= 0 && from < TABLEAU_COUNT &&
-        to >= 0 && to < TABLEAU_COUNT &&
+    if (from < TABLEAU_COUNT &&
+        to < TABLEAU_COUNT &&
         from != to)
     {
         move_card(
