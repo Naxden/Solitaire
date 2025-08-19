@@ -2,7 +2,7 @@
 
 renderer::renderer()
 {
-    InitWindow(screenWidth, screenHeight, windowTitle);
+    InitWindow(_screen_width, _screen_height, _window_title);
 }
 
 renderer::~renderer()
