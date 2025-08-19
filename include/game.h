@@ -29,6 +29,7 @@ public:
     void move_card(card *moved, pile &target);
     void undo_move();
     
+    void update();
     private:
     void shuffle_deck();
     void reset_board();
