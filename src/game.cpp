@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <format>
+#include "game_state.h"
 
 game::game()
 {
@@ -464,6 +465,17 @@ void game::update()
     {
         print_cards();
     }
+}
+
+game_state game::export_game_state() const noexcept
+{
+    return game_state
+    {
+        .tableaus = _tableaus,
+        .foundations = _foundations,
+        .deck = _deck,
+        .current_deck = _current_deck
+    };
 }
 
 void game::reset_board()

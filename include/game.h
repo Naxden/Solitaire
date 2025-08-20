@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include <stack>
 #include <array>
 #include "card.h"
@@ -10,6 +9,8 @@ constexpr uint8_t VALUE_COUNT = 13;
 constexpr uint8_t TABLEAU_COUNT = 7;
 constexpr uint8_t FOUNDATION_COUNT = 4;
 constexpr uint8_t CARDS_COUNT = COLOR_COUNT * VALUE_COUNT;
+
+struct game_state;
 
 class game
 {
@@ -30,6 +31,7 @@ public:
     void undo_move();
     
     void update();
+    game_state export_game_state() const noexcept;
     private:
     void shuffle_deck();
     void reset_board();

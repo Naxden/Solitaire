@@ -1,18 +1,21 @@
 #include "renderer.h"
 #include "game.h"
+#include "game_state.h"
  
 int main()
 {
-    renderer ren;
+    renderer renderer;
     game game;
 
     game.new_game();
     
     // Main loop
-    while(!ren.should_close())
+    while(!renderer.should_close())
     {
         game.update();
-        ren.update();
+        
+        game_state state = game.export_game_state();
+        renderer.update(state);
     }
  
     return 0;
