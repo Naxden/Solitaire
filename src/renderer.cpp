@@ -74,37 +74,6 @@ void renderer::update(const game_state& state)
 
         draw_card(state.current_deck, x, y);
     }
-
-
-    // for (const auto& c : _state.cards)
-    // {
-    //     float x = 0.f, y = 0.f;
-    //     switch (c.kind)
-    //     {
-    //         case pile_kind::tableau:
-    //             x = (float)(MARGIN + c.pile_index * (CARD_W + TAB_SPACING_X));
-    //             y = (float)(MARGIN + 150 + c.stack_pos * TAB_SPACING_Y);
-    //             break;
-    //         case pile_kind::foundation:
-    //             x = (float)(GetScreenWidth() - (4 - c.pile_index) * (CARD_W + FND_SPACING_X) - MARGIN);
-    //             y = (float)(MARGIN + 24);
-    //             break;
-    //         case pile_kind::deck:
-    //             x = (float)MARGIN;
-    //             y = (float)(MARGIN + 24); // tylko top rysujemy „na płasko”
-    //             break;
-    //     }
-
-    //     Color back = c.face_up ? RAYWHITE : DARKBLUE;
-    //     DrawRectangleRounded(Rectangle{ x, y, (float)CARD_W, (float)CARD_H }, 0.08f, 6, back);
-    //     DrawRectangleRoundedLines(Rectangle{ x, y, (float)CARD_W, (float)CARD_H }, 0.08f, 6, DARKGRAY);
-
-    //     if (c.face_up)
-    //     {
-    //         DrawText(TextFormat("%d", (int)c.value), (int)x + 8, (int)y + 6, 18, BLACK);
-    //     }
-    // }
-
     // // HUD
     // DrawText(TextFormat("Moves: %u", _state.moves_count), MARGIN, GetScreenHeight() - 30, 20, YELLOW);
 
@@ -126,8 +95,7 @@ void inline renderer::draw_card(const card *c, float x, float y) noexcept
 
         if (c->face_up)
         {
-            
-            DrawText(TextFormat("%s", toString(*c)), (int)x + 8, (int)y + 6, 18, BLACK);
+            DrawText(TextFormat("%s", toString(*c).c_str()), (int)x + 8, (int)y + 6, 18, BLACK);
         }
     }
 }

@@ -87,18 +87,18 @@ inline const char* toString(pile_type state)
     }
 }
 
-inline const char* toString(const card& card)
+inline std::string toString(const card& card)
 {
     return std::format("{}\n{}",
         toString(card.get_suit()),
-        toString(card.get_value())).c_str();
+        toString(card.get_value()));
 }
 
-inline const char* toString_char(const card& card)
+inline std::string toString_char(const card& card)
 {
     return std::format("{} {}",
         toString_char(card.get_suit()),
-        toString_char(card.get_value())).c_str();
+        toString_char(card.get_value()));
 }
 
 inline void print_card(const card& card)
