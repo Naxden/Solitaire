@@ -475,6 +475,7 @@ void game::clicked(const hit_result& hit) noexcept
         if (!_holded)
         {
             _holded = hit.hit_card;
+            return;
         }
         else
         {
@@ -482,9 +483,20 @@ void game::clicked(const hit_result& hit) noexcept
             {
                 move_card(_holded, *hit.hit_card->owner);
             }
-            _holded = nullptr;
         }
     }
+    else if (hit.hit_pile)
+    {
+        if (hit.hit_pile->type == pile_type::deck)
+        {
+            next_deck();
+        }
+        else if (hit.hit_pile->is_valid_first_placement(_holded))
+        {
+            move_card(_holded, *hit.hit_pile);
+        }
+    }
+    _holded = nullptr;
 }
 
 game_state game::export_game_state() noexcept

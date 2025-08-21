@@ -257,7 +257,7 @@ Rectangle renderer::pile_rect(const pile &p) const noexcept
         break;
     case pile_type::deck:
         rec.x = static_cast<float>(MARGIN);
-        rec.y = static_cast<float>(p.get_height() * DEC_SPACING_Y);
+        rec.y = static_cast<float>(p.get_height() * DEC_SPACING_Y + MARGIN);
         break;
     default:
         break;
