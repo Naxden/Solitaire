@@ -8,7 +8,7 @@ bool card::is_valid_placement(const card &other) const
         switch (owner->type)
         {
         case pile_type::tableau:
-            if (_value != card_value::Ace)
+            if (other._value != card_value::Ace)
             {
                 if (!is_same_color(_suite, other._suite))
                 {

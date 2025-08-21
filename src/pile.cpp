@@ -27,7 +27,7 @@ card* pile::get_last() const noexcept
     return card;
 }
 
-int8_t pile::get_position_in_pile(card *c) const noexcept
+int8_t pile::get_position_in_pile(const card *c) const noexcept
 {
     int8_t index = 0;
     for (auto card = first; card; card = card->next, index++)
@@ -38,7 +38,7 @@ int8_t pile::get_position_in_pile(card *c) const noexcept
     return -1;
 }
 
-void pile::erase_single_from_pile(card *c) noexcept
+void pile::erase_single_from_pile(const card *c) noexcept
 {
     if (c && !empty())
     {
@@ -62,7 +62,7 @@ void pile::erase_single_from_pile(card *c) noexcept
     }
 }
 
-bool pile::is_valid_first_placement(card *c) const noexcept
+bool pile::is_valid_first_placement(const card *c) const noexcept
 {
     if (c && empty())
     {

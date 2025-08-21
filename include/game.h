@@ -11,6 +11,7 @@ constexpr uint8_t FOUNDATION_COUNT = 4;
 constexpr uint8_t CARDS_COUNT = COLOR_COUNT * VALUE_COUNT;
 
 struct game_state;
+struct hit_result;
 
 class game
 {
@@ -31,7 +32,8 @@ public:
     void undo_move();
     
     void update();
-    game_state export_game_state() const noexcept;
+    void clicked(const hit_result& hit) noexcept;
+    game_state export_game_state() noexcept;
     private:
     void shuffle_deck();
     void reset_board();
@@ -43,4 +45,5 @@ private:
     card* _current_deck = nullptr;
     card* _picked_deck = nullptr;
     std::stack<move> _moves;
+    card* _holded = nullptr;
 };

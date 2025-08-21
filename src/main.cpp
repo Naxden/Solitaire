@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "game.h"
 #include "game_state.h"
+#include "hit_result.h"
  
 int main()
 {
@@ -12,9 +13,15 @@ int main()
     // Main loop
     while(!renderer.should_close())
     {
-        game.update();
+        //game.update();
         
         game_state state = game.export_game_state();
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            game.clicked(renderer.hit_test(state, GetMousePosition()));
+        }
+
         renderer.update(state);
     }
  

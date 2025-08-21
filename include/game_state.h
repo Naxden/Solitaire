@@ -3,8 +3,9 @@
 
 struct game_state
 {
-    const std::array<pile, TABLEAU_COUNT>& tableaus;
-    const std::array<pile, FOUNDATION_COUNT>& foundations;
-    const pile& deck;
-    const card* current_deck;
+    std::array<pile, TABLEAU_COUNT>& tableaus;
+    std::array<pile, FOUNDATION_COUNT>& foundations;
+    pile& deck;
+    card* current_deck;
+    const std::stack<move>& moves;
 };

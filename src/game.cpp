@@ -1,10 +1,11 @@
 #include "game.h"
-#include "console_card.h"
 #include <random>
 #include <algorithm>
 #include <iostream>
 #include <format>
+#include "console_card.h"
 #include "game_state.h"
+#include "hit_result.h"
 
 game::game()
 {
@@ -467,14 +468,34 @@ void game::update()
     }
 }
 
-game_state game::export_game_state() const noexcept
+void game::clicked(const hit_result& hit) noexcept
+{
+    if (hit.hit_card)
+    {
+        if (!_holded)
+        {
+            _holded = hit.hit_card;
+        }
+        else
+        {
+            if (hit.hit_card->is_valid_placement(*_holded))
+            {
+                move_card(_holded, *hit.hit_card->owner);
+            }
+            _holded = nullptr;
+        }
+    }
+}
+
+game_state game::export_game_state() noexcept
 {
     return game_state
     {
         .tableaus = _tableaus,
         .foundations = _foundations,
         .deck = _deck,
-        .current_deck = _current_deck
+        .current_deck = _current_deck,
+        .moves = _moves
     };
 }
 
