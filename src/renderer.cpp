@@ -22,59 +22,94 @@ renderer::~renderer()
     CloseWindow();
 }
 
-void renderer::update(const game_state& state)
+void renderer::update(const game_state& state, Vector2 mouse_pos)
 {
 BeginDrawing();
     ClearBackground(Color{22, 120, 80, 255});
 
+    // Drop target test
+    const pile* drop_pile = nullptr;
+    bool drop_valid = false;
+    if (_drag_card)
+    {
+        auto hit = hit_test(state, mouse_pos);
+        if (hit.hit_pile)
+            drop_pile = hit.hit_pile;
+        else if (hit.hit_card)
+            drop_pile = hit.hit_card->owner;
+
+        if (drop_pile)
+        {
+            if (drop_pile->empty())
+                drop_valid = drop_pile->is_valid_first_placement(const_cast<card*>(_drag_card));
+            else
+                drop_valid = drop_pile->get_last()->is_valid_placement(*_drag_card);
+        }
+    }
+
+    // Foundations
     for (const auto& f : state.foundations)
     {
         if (!f.empty())
         {
-            draw_card(f.get_last());
+            // pomijaj karty z przeciąganego łańcucha
+            if (!_drag_card || !in_drag_chain(f.get_last()))
+            {
+                draw_card(f.get_last());
+            }
         }
-
         DrawRectangleRoundedLines(pile_rect_hit(f), 0.1f, 16, YELLOW);
     }
 
+    // Tableaus
     for (const auto& t : state.tableaus)
     {
         if (!t.empty())
         {
-            auto card =  t.get_first();
-
-            for (int in_pile_index = 0; card; card = card->next, in_pile_index++)
+            auto c =  t.get_first();
+            for (; c; c = c->next)
             {
-                draw_card(card);
+                if (_drag_card && in_drag_chain(c)) continue;
+                draw_card(c);
             }
         }
-
         DrawRectangleRoundedLines(pile_rect_hit(t), 0.1f, 16, YELLOW);
     }
 
+    // Deck
     if (!state.deck.empty())
     {
-        float x = (float)MARGIN, y = 0.f;
-        auto card = state.deck.get_first();
-
-        for (int in_pile_index = 0; card; card = card->next, in_pile_index++)
+        for (auto c = state.deck.get_first(); c; c = c->next)
         {
-            // if (card == state.current_deck)
-            // {
-            //     in_pile_index--;
-            //     continue;
-            // }
-
-            // y = (float)(MARGIN + in_pile_index * 3);
-
-            draw_card(card);
+            if (_drag_card && in_drag_chain(c)) continue;
+            draw_card(c);
         }
     }
     DrawRectangleRoundedLines(pile_rect_hit(state.deck), 0.1f, 16, YELLOW);
 
-    if (state.current_deck)
+    // Highlight drop 
+    if (drop_pile)
     {
-        draw_card(state.current_deck);
+        auto pr = pile_rect_hit(*drop_pile);
+        DrawRectangleRoundedLines(pr, 0.1f, 16, drop_valid ? GREEN : RED);
+    }
+
+    // Dragged chain
+    if (_drag_card)
+    {
+        Rectangle cr {
+            .x = _drag_mouse.x - _drag_offset.x,
+            .y = _drag_mouse.y - _drag_offset.y,
+            .width = static_cast<float>(CARD_W),
+            .height = static_cast<float>(CARD_H),
+        };
+        for (auto c = _drag_card; c; c = c->next)
+        {
+            draw_card(c, cr);
+            if (c->owner->type == pile_type::deck)
+                break;
+            cr.y += TAB_SPACING_Y;
+        }
     }
 
     // HUD
@@ -83,11 +118,11 @@ BeginDrawing();
 EndDrawing();
 }
 
-hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const noexcept
+hit_result renderer::hit_test(const game_state &state, Vector2 mouse_pos) const noexcept
 {
     if (state.current_deck)
     {
-        if (hit_test_card(state.current_deck, mousePos))
+        if (hit_test_card(state.current_deck, mouse_pos))
         {
             return hit_result{ .hit_card = state.current_deck, .hit_pile = nullptr };
         }
@@ -95,7 +130,7 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
 
     {
         Rectangle stock = pile_rect_hit(state.deck);
-        if (CheckCollisionPointRec(mousePos, stock))
+        if (CheckCollisionPointRec(mouse_pos, stock))
         {
             return hit_result{ .hit_card = nullptr, .hit_pile = &state.deck };
         }
@@ -103,7 +138,7 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
 
     for (auto& f : state.foundations)
     {
-        if (CheckCollisionPointRec(mousePos, pile_rect_hit(f)))
+        if (CheckCollisionPointRec(mouse_pos, pile_rect_hit(f)))
         {
             if (!f.empty())
             {
@@ -127,7 +162,7 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
 
         if (t.empty())
         {
-            if (CheckCollisionPointRec(mousePos, col))
+            if (CheckCollisionPointRec(mouse_pos, col))
             {
                 empty_tableau_slot = &t;
             }
@@ -136,7 +171,7 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
 
         for (card* c = t.get_first(); c; c = c->next)
         {
-            if (hit_test_card(c, mousePos))
+            if (hit_test_card(c, mouse_pos))
             {
                 target_card = c;
                 break;
@@ -266,11 +301,11 @@ Rectangle renderer::pile_rect_hit(const pile &p) const noexcept
     return rec;
 }
 
-bool renderer::hit_test_card(const card *c, Vector2 mousePos) const noexcept
+bool renderer::hit_test_card(const card *c, Vector2 mouse_pos) const noexcept
 {
     if (c && c->face_up)
     {
-        return CheckCollisionPointRec(mousePos, card_rect_hit(c));
+        return CheckCollisionPointRec(mouse_pos, card_rect_hit(c));
     }
     return false;
 }
@@ -331,4 +366,48 @@ Rectangle renderer::src_card_rect(const card *c) const noexcept
             .height = static_cast<float>(TILE_H),
         };
     }
+}
+
+void renderer::begin_drag(const card* c, Vector2 mouse_pos) noexcept
+{
+    if (c && c->face_up)
+    {
+        _drag_card = c;
+        _drag_mouse = mouse_pos;
+    
+        const auto r = card_rect_draw(c);
+        _drag_offset = Vector2{ mouse_pos.x - r.x, mouse_pos.y - r.y };
+    }
+}
+
+void renderer::update_drag(Vector2 mouse_pos) noexcept
+{
+    if (_drag_card)
+    {
+      _drag_mouse = mouse_pos;  
+    } 
+}
+
+void renderer::end_drag() noexcept
+{
+    _drag_card = nullptr;
+    _drag_mouse = Vector2{0,0};
+    _drag_offset = Vector2{0,0};
+}
+
+bool renderer::in_drag_chain(const card* c) const noexcept
+{
+    if (_drag_card && c)
+    {
+        if (_drag_card->owner->type == pile_type::deck)
+        {
+            return c == _drag_card;
+        }
+        
+        for (auto it = _drag_card; it; it = it->next)
+        {
+            if (it == c) return true;
+        }
+    }
+    return false;
 }

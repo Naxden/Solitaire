@@ -45,5 +45,4 @@ private:
     card* _current_deck = nullptr;
     card* _picked_deck = nullptr;
     std::stack<move> _moves;
-    card* _holded = nullptr;
 };

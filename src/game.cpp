@@ -415,8 +415,6 @@ void game::undo_move()
             from_pile->first = moved_card;
         }
     }
-
-    _holded = nullptr;
 }
 
 bool parse_t_command(const std::string& cmd, int& a, int& b)
@@ -468,37 +466,6 @@ void game::update()
     {
         print_cards();
     }
-}
-
-void game::clicked(const hit_result& hit) noexcept
-{
-    if (hit.hit_card)
-    {
-        if (!_holded)
-        {
-            _holded = hit.hit_card;
-            return;
-        }
-        else
-        {
-            if (hit.hit_card->is_valid_placement(*_holded))
-            {
-                move_card(_holded, *hit.hit_card->owner);
-            }
-        }
-    }
-    else if (hit.hit_pile)
-    {
-        if (hit.hit_pile->type == pile_type::deck)
-        {
-            next_deck();
-        }
-        else if (hit.hit_pile->is_valid_first_placement(_holded))
-        {
-            move_card(_holded, *hit.hit_pile);
-        }
-    }
-    _holded = nullptr;
 }
 
 game_state game::export_game_state() noexcept

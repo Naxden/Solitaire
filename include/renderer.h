@@ -12,19 +12,27 @@ class renderer
 public:
     renderer();
     ~renderer();
-    void update(const game_state& state);
-    hit_result hit_test(const game_state& state, Vector2 mousePos) const noexcept;
+    void update(const game_state& state, Vector2 mouse_pos);
+    hit_result hit_test(const game_state& state, Vector2 mouse_pos) const noexcept;
     bool should_close() const noexcept;
+
+    void begin_drag(const card* c, Vector2 mouse_pos) noexcept;
+    void update_drag(Vector2 mouse_pos) noexcept;
+    void end_drag() noexcept;
+    bool is_dragging() const noexcept { return _drag_card != nullptr; }
+
 private:
+    bool hit_test_card(const card* c, Vector2 mouse_pos) const noexcept;
+
     Vector2 stationary_card_pos(const card* c) const noexcept;
     Rectangle card_rect_draw(const card* c) const noexcept;
     Rectangle card_rect_hit(const card* c) const noexcept;
     Rectangle pile_rect_hit(const pile& p) const noexcept;
-    bool hit_test_card(const card* c, Vector2 mousePos) const noexcept;
+    Rectangle src_card_rect(const card* c) const noexcept;
     void draw_card(const card* c) noexcept;
     void draw_card(const card* c, Rectangle cr) noexcept;
-    Rectangle src_card_rect(const card* c) const noexcept;
-    Rectangle card_back_src() const noexcept;
+
+    bool in_drag_chain(const card* c) const noexcept;
 private:
     static constexpr int MARGIN = 20;
     static constexpr int CARD_W = 70;
@@ -43,6 +51,10 @@ private:
     const int _screen_height = 768;
     const char* _window_title = "Solitaire";
 
-    // Tekstury
     Texture2D _cardsTex{};
+
+    // drag&drop
+    const card* _drag_card = nullptr;
+    Vector2 _drag_mouse{0,0};
+    Vector2 _drag_offset{0,0};
 };
