@@ -415,6 +415,8 @@ void game::undo_move()
             from_pile->first = moved_card;
         }
     }
+
+    _holded = nullptr;
 }
 
 bool parse_t_command(const std::string& cmd, int& a, int& b)

@@ -21,6 +21,10 @@ int main()
         {
             game.clicked(renderer.hit_test(state, GetMousePosition()));
         }
+        else if (IsKeyPressed(KEY_Z))
+        {
+            game.undo_move();
+        }
         
         renderer.update(state);
     }
