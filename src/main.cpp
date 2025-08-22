@@ -21,7 +21,7 @@ int main()
         {
             game.clicked(renderer.hit_test(state, GetMousePosition()));
         }
-
+        
         renderer.update(state);
     }
  

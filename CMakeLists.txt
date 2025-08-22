@@ -23,5 +23,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${raylib_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME} raylib)
 
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets)
+
 # C++20
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)

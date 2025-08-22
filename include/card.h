@@ -4,10 +4,10 @@
 
 enum class card_suit : uint8_t
 {
-    Hearths,
-    Diamonds,
-    Clubs,
     Spades,
+    Hearths,
+    Clubs,
+    Diamonds,
 };
 
 inline bool is_same_color(card_suit a, card_suit b)

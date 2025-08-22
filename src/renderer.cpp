@@ -6,10 +6,19 @@
 renderer::renderer()
 {
     InitWindow(_screen_width, _screen_height, _window_title);
+    _cardsTex = LoadTexture("assets/solitaire_cards.png");
+    if (_cardsTex.id != 0)
+    {
+        SetTextureFilter(_cardsTex, TEXTURE_FILTER_BILINEAR);
+    }
 }
 
 renderer::~renderer()
 {
+    if (_cardsTex.id != 0)
+    {
+        UnloadTexture(_cardsTex);
+    }
     CloseWindow();
 }
 
@@ -25,7 +34,7 @@ BeginDrawing();
             draw_card(f.get_last());
         }
 
-        DrawRectangleRoundedLines(pile_rect(f), 0.1f, 16, YELLOW);
+        DrawRectangleRoundedLines(pile_rect_hit(f), 0.1f, 16, YELLOW);
     }
 
     for (const auto& t : state.tableaus)
@@ -40,7 +49,7 @@ BeginDrawing();
             }
         }
 
-        DrawRectangleRoundedLines(pile_rect(t), 0.1f, 16, YELLOW);
+        DrawRectangleRoundedLines(pile_rect_hit(t), 0.1f, 16, YELLOW);
     }
 
     if (!state.deck.empty())
@@ -61,7 +70,7 @@ BeginDrawing();
             draw_card(card);
         }
     }
-    DrawRectangleRoundedLines(pile_rect(state.deck), 0.1f, 16, YELLOW);
+    DrawRectangleRoundedLines(pile_rect_hit(state.deck), 0.1f, 16, YELLOW);
 
     if (state.current_deck)
     {
@@ -78,14 +87,14 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
 {
     if (state.current_deck)
     {
-        if (CheckCollisionPointRec(mousePos, card_rect(state.current_deck)))
+        if (hit_test_card(state.current_deck, mousePos))
         {
             return hit_result{ .hit_card = state.current_deck, .hit_pile = nullptr };
         }
     }
 
     {
-        Rectangle stock = pile_rect(state.deck);
+        Rectangle stock = pile_rect_hit(state.deck);
         if (CheckCollisionPointRec(mousePos, stock))
         {
             return hit_result{ .hit_card = nullptr, .hit_pile = &state.deck };
@@ -94,7 +103,7 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
 
     for (auto& f : state.foundations)
     {
-        if (CheckCollisionPointRec(mousePos, pile_rect(f)))
+        if (CheckCollisionPointRec(mousePos, pile_rect_hit(f)))
         {
             if (!f.empty())
             {
@@ -114,7 +123,7 @@ hit_result renderer::hit_test(const game_state &state, Vector2 mousePos) const n
     )
     {
         auto& t = state.tableaus[t_index];
-        Rectangle col = pile_rect(t);
+        Rectangle col = pile_rect_hit(t);
 
         if (t.empty())
         {
@@ -152,92 +161,83 @@ bool renderer::should_close() const noexcept
     return WindowShouldClose();
 }
 
-Rectangle renderer::card_rect(const card *c) const noexcept
+Vector2 renderer::stationary_card_pos(const card *c) const noexcept
 {
     if (c && c->owner)
     {
-        Rectangle rec { 
-            .width = static_cast<float>(CARD_W), 
-            .height = static_cast<float>(CARD_H) 
-        };
         auto pile_index = c->owner->index;
         auto in_pile_index = c->owner->get_position_in_pile(c);
 
         switch (c->owner->type)
         {
         case pile_type::foundation:
-            rec.x = static_cast<float>(
-                GetScreenWidth() - (FOUNDATION_COUNT - pile_index) * 
-                (CARD_W + FND_SPACING_X) - MARGIN);
-            rec.y = static_cast<float>(MARGIN);
-            break;
+            return Vector2 {
+                .x = static_cast<float>(
+                    GetScreenWidth() - (FOUNDATION_COUNT - pile_index) * 
+                    (CARD_W + FND_SPACING_X) - MARGIN),
+                .y = static_cast<float>(MARGIN),
+            };
 
         case pile_type::tableau:
-            rec.x = static_cast<float>(
-                MARGIN + pile_index * (CARD_W + TAB_SPACING_X));
-            rec.y = static_cast<float>(
-                MARGIN + 300 + in_pile_index * TAB_SPACING_Y);
-            if (c->next)
-            {
-                rec.height = TAB_SPACING_Y; 
-            }
-            break;
+            return Vector2 {
+                .x = static_cast<float>(MARGIN + pile_index *
+                    (CARD_W + TAB_SPACING_X)),
+                .y = static_cast<float>(MARGIN + 300 + in_pile_index *
+                    TAB_SPACING_Y),
+            };
+
         case pile_type::deck:
-            if (c->face_up)
-            {
-                rec.x = static_cast<float>(MARGIN + CARD_W + DEC_SPACING_X);
-                rec.y = static_cast<float>(MARGIN);
-            }
-            else
-            {
-                rec.x = static_cast<float>(MARGIN);
-                rec.y = static_cast<float>(MARGIN + in_pile_index * DEC_SPACING_Y);
-            }
-            break;
+            return Vector2 {
+                .x = static_cast<float>( c->face_up ?
+                    MARGIN + CARD_W + DEC_SPACING_X :
+                    MARGIN),
+                .y = static_cast<float>( c->face_up ?
+                    MARGIN :
+                    MARGIN + in_pile_index * DEC_SPACING_Y),
+            };
         default:
             break;
         }
-        return rec;
+    }
+
+    return Vector2();
+}
+
+Rectangle renderer::card_rect_draw(const card *c) const noexcept
+{
+    if (c)
+    {
+        auto cpos = stationary_card_pos(c);
+
+        return Rectangle { 
+            .x = cpos.x,
+            .y = cpos.y,
+            .width = static_cast<float>(CARD_W), 
+            .height = static_cast<float>(CARD_H),
+        };
     }
     
     return Rectangle();
 }
 
-Rectangle renderer::pile_type_rect(pile_type type) const noexcept
+Rectangle renderer::card_rect_hit(const card *c) const noexcept
 {
-    switch (type)
+    if (c)
     {
-    case pile_type::deck:
-        return Rectangle {
-            .x = static_cast<float>(MARGIN),
-            .y = static_cast<float>(MARGIN),
-            .width = static_cast<float>(2 * CARD_W + DEC_SPACING_X),
-            .height = static_cast<float>(CARD_H + 24 * DEC_SPACING_Y),
-        };
-        break;
-    case pile_type::foundation:
-        return Rectangle {
-            .x = static_cast<float>(GetScreenWidth() - FOUNDATION_COUNT * 
-                (CARD_W + FND_SPACING_X) - MARGIN),
-            .y = static_cast<float>(MARGIN),
-            .width = static_cast<float>(FOUNDATION_COUNT * (CARD_W + FND_SPACING_X) - FND_SPACING_X),
-            .height = static_cast<float>(CARD_H),
-        };
-    case pile_type::tableau:
-        return Rectangle {
-            .x = static_cast<float>(MARGIN),
-            .y = static_cast<float>(MARGIN + TAB_OFFSET_Y),
-            .width = static_cast<float>(TABLEAU_COUNT * (CARD_W + TAB_SPACING_X) - TAB_SPACING_X),
-            .height = static_cast<float>(CARD_H + 13 * TAB_SPACING_Y),
-        };
-    default:
-    break;
-    }
+        auto base_card_rect = card_rect_draw(c);
+        
+        if (c->next && c->owner && c->owner->type == pile_type::tableau)
+        {
+            base_card_rect.height = TAB_SPACING_Y;
+        }
 
+        return base_card_rect;
+    }
+    
     return Rectangle();
 }
 
-Rectangle renderer::pile_rect(const pile &p) const noexcept
+Rectangle renderer::pile_rect_hit(const pile &p) const noexcept
 {
     Rectangle rec {
         .width = static_cast<float>(CARD_W),
@@ -270,7 +270,7 @@ bool renderer::hit_test_card(const card *c, Vector2 mousePos) const noexcept
 {
     if (c && c->face_up)
     {
-        return CheckCollisionPointRec(mousePos, card_rect(c));
+        return CheckCollisionPointRec(mousePos, card_rect_hit(c));
     }
     return false;
 }
@@ -279,7 +279,7 @@ void renderer::draw_card(const card *c) noexcept
 {
     if (c)
     {
-        draw_card(c, card_rect(c));
+        draw_card(c, card_rect_draw(c));
     }
 }
 
@@ -287,13 +287,48 @@ void renderer::draw_card(const card *c, Rectangle cr) noexcept
 {
     if (c)
     {
-        Color back = c->face_up ? RAYWHITE : DARKBLUE;
-        DrawRectangleRounded(cr, 0.08f, 6, back);
-        DrawRectangleRoundedLines(cr, 0.08f, 6, DARKGRAY);
-
-        if (c->face_up)
+        if (_cardsTex.id == 0)
         {
-            DrawText(TextFormat("%s", toString(*c).c_str()), (int)cr.x + 8, (int)cr.y + 6, 18, BLACK);
+            Color back = c->face_up ? RAYWHITE : DARKBLUE;
+            DrawRectangleRounded(cr, 0.08f, 6, back);
+            DrawRectangleRoundedLines(cr, 0.08f, 6, DARKGRAY);
+            
+            if (c->face_up)
+            {
+                DrawText(TextFormat("%s", toString(*c).c_str()), 
+                    static_cast<int>(cr.x + 8),
+                    static_cast<int>(cr.y + 6), 
+                    18, BLACK);
+            }
         }
+        else
+        {
+            DrawTexturePro(_cardsTex, src_card_rect(c), cr, Vector2{0,0}, 0.0f, WHITE);
+        }
+    }
+}
+
+Rectangle renderer::src_card_rect(const card *c) const noexcept
+{
+    if (c && c->face_up)
+    {
+        const uint8_t col = static_cast<uint8_t>(c->get_value()) - 1;
+        const uint8_t row = static_cast<uint8_t>(c->get_suit());
+        
+        return Rectangle {
+            .x = static_cast<float>(col * TILE_W),
+            .y = static_cast<float>(row * TILE_H),
+            .width  = static_cast<float>(TILE_W),
+            .height = static_cast<float>(TILE_H),
+        };
+    }
+    else
+    {
+        return Rectangle {
+            .x = static_cast<float>(0 * TILE_W),
+            .y = static_cast<float>(4 * TILE_H),
+            .width  = static_cast<float>(TILE_W),
+            .height = static_cast<float>(TILE_H),
+        };
     }
 }
