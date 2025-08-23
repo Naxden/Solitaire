@@ -2,66 +2,51 @@
 #include "game.h"
 #include "game_state.h"
 #include "hit_result.h"
+#include "drag_controller.h"
+
 
 int main()
 {
     renderer renderer;
     game game;
+    drag_controller drag;
 
     game.new_game();
-
-    card* dragging = nullptr;
 
     while(!renderer.should_close())
     {
         game_state state = game.export_game_state();
-
         Vector2 mouse = GetMousePosition();
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
-
             auto hit = renderer.hit_test(state, mouse);
-            if (hit.hit_card && hit.hit_card->face_up)
+
+            if (hit.hit_card)
             {
-                dragging = hit.hit_card;
-                renderer.begin_drag(dragging, mouse);
+                drag.start(hit.hit_card, mouse, renderer.card_rect_draw(hit.hit_card));
             }
             else if (hit.hit_pile && hit.hit_pile->type == pile_type::deck)
             {
                 game.next_deck();
             }
         }
-
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && dragging)
+        else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
-            renderer.update_drag(mouse);
+            drag.update(mouse);
         }
-
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && dragging)
+        else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
             auto hit = renderer.hit_test(state, mouse);
-            pile* target = nullptr;
-            if (hit.hit_pile)
-                target = hit.hit_pile;
-            else if (hit.hit_card)
-                target = hit.hit_card->owner;
-
-            if (target)
-            {
-                game.move_card(dragging, *target);
-            }
-
-            dragging = nullptr;
-            renderer.end_drag();
+            drag.end(game, hit);
         }
 
         if (IsKeyPressed(KEY_Z))
         {
             game.undo_move();
         }
-        
-        renderer.update(state, mouse);
+
+        renderer.update(state, mouse, drag.overlay());
     }
     return 0;
 }
