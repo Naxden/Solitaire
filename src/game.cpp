@@ -373,6 +373,7 @@ void game::undo_move()
         auto prev_parent = last_move.prev_parent;
         const auto is_from_deck = from_pile->type == pile_type::deck;
 
+        moved_card->face_up = !is_from_deck;
         if (prev_parent)
         {
             if (is_from_deck)
@@ -413,6 +414,17 @@ void game::undo_move()
         if (from_pile->empty())
         {
             from_pile->first = moved_card;
+        }
+
+        if (_picked_deck && _picked_deck == moved_card->next)
+        {
+            if (_current_deck)
+            {
+                _current_deck->face_up = false;
+            }
+            _current_deck = moved_card;
+            _current_deck->face_up = true;
+            _picked_deck = nullptr;
         }
     }
 }
@@ -472,6 +484,7 @@ game_state game::export_game_state() noexcept
 {
     return game_state
     {
+        .cards = _cards,
         .tableaus = _tableaus,
         .foundations = _foundations,
         .deck = _deck,
