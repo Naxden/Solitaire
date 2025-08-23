@@ -63,8 +63,18 @@ BeginDrawing();
     {
         if (!f.empty())
         {
-            if (!(drag && in_drag_chain(drag->root, f.get_last())))
-                draw_card(f.get_last());
+            // Top 2 cards
+            auto top_card = f.get_last();
+            auto top_parent_card = top_card->get_parent();
+
+            if (top_parent_card)
+            {
+                draw_card(top_parent_card);
+            }
+            if (!(drag && in_drag_chain(drag->root, top_card)))
+            {
+                draw_card(top_card);
+            }
         }
         DrawRectangleRoundedLines(pile_rect_hit(f), 0.1f, 16, YELLOW);
     }
