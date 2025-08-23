@@ -30,6 +30,8 @@ game::game()
     {
         _foundations[f] = {pile_type::foundation, f};
     }
+
+    new_game();
 }
 
 void game::print_cards() const
