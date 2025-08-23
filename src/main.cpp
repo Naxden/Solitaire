@@ -4,14 +4,20 @@
 #include "hit_result.h"
 #include "drag_controller.h"
 
-
 int main()
 {
     renderer renderer;
     game game;
     drag_controller drag;
 
-    game.new_game();
+    renderer.register_button("New Game", [&](){
+        game.new_game();
+        drag = drag_controller();
+    });
+
+    renderer.register_button("Undo move", [&](){
+        game.undo_move();
+    });
 
     while(!renderer.should_close())
     {
@@ -44,6 +50,12 @@ int main()
         if (IsKeyPressed(KEY_Z))
         {
             game.undo_move();
+        }
+
+        if (IsKeyPressed(KEY_R))
+        {
+            game.new_game();
+            drag = drag_controller();
         }
 
         renderer.update(state, mouse, drag.overlay());

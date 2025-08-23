@@ -4,7 +4,6 @@
 #include "hit_result.h"
 #include "drag_controller.h"
 
-
 renderer::renderer()
 {
     InitWindow(_screen_width, _screen_height, _window_title);
@@ -22,6 +21,17 @@ renderer::~renderer()
         UnloadTexture(_cardsTex);
     }
     CloseWindow();
+}
+
+size_t renderer::register_button(std::string label, std::function<void()> on_click)
+{
+    _buttons.push_back(ui_button{ next_button_rect(), std::move(label), std::move(on_click), false });
+    return _buttons.size() - 1;
+}
+
+void renderer::clear_buttons()
+{
+    _buttons.clear();
 }
 
 void renderer::update(const game_state & state, Vector2 mouse_pos,
@@ -108,8 +118,62 @@ BeginDrawing();
         }
     }
 
-    DrawText(TextFormat("Moves: %u", state.moves.size()), MARGIN, GetScreenHeight() - 30, 20, YELLOW);
+    // HUD
+    DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN, GetScreenHeight() - 60, 20, YELLOW);
+
+    // UI buttons
+    draw_buttons(mouse_pos);
+
 EndDrawing();
+}
+
+void renderer::draw_buttons(Vector2 mouse_pos)
+{
+    for (auto& b : _buttons)
+    {
+        bool hover = CheckCollisionPointRec(mouse_pos, b.rect);
+        bool pressed_now = IsMouseButtonDown(MOUSE_BUTTON_LEFT) && hover;
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && hover)
+        {
+            b.pressed = true;
+        }
+
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+        {
+            if (b.pressed && hover && b.on_click)
+            {
+                b.on_click();
+            }
+
+            b.pressed = false;
+        }
+
+        Color fill = LIGHTGRAY;
+        if (b.pressed && pressed_now) fill = GRAY;
+        else if (hover) fill = Color{ 200, 220, 255, 255 };
+
+        DrawRectangleRounded(b.rect, 0.2f, 8, fill);
+        DrawRectangleRoundedLines(b.rect, 0.2f, 8, DARKGRAY);
+
+        int fontSize = 20;
+        int tw = MeasureText(b.label.c_str(), fontSize);
+        int tx = static_cast<int>(b.rect.x + (b.rect.width - tw) / 2);
+        int ty = static_cast<int>(b.rect.y + (b.rect.height - fontSize) / 2 + 1);
+        DrawText(b.label.c_str(), tx, ty, fontSize, BLACK);
+    }
+}
+
+Rectangle renderer::next_button_rect() const noexcept
+{
+    return Rectangle {
+        .x = static_cast<float>(GetScreenWidth() - 
+            (BUTTON_COL_C - _buttons.size() % BUTTON_COL_C) * BUTTON_W),
+        .y =  static_cast<float>(GetScreenHeight() - 
+            _buttons.size() / BUTTON_COL_C * BUTTON_H - BUTTON_H - BUTTON_MARGIN),
+        .width = static_cast<float>(BUTTON_W),
+        .height = static_cast<float>(BUTTON_H),
+    };
 }
 
 hit_result renderer::hit_test(const game_state &state, Vector2 mouse_pos) const noexcept

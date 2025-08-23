@@ -1,6 +1,9 @@
 #pragma once
-#include "raylib.h"
 #include <optional>
+#include <functional>
+#include <string>
+#include <vector>
+#include "raylib.h"
 
 struct game_state;
 struct hit_result;
@@ -20,6 +23,10 @@ public:
     bool should_close() const noexcept;
 
     Rectangle card_rect_draw(const card* c) const noexcept;
+
+    size_t register_button(std::string label, std::function<void()> on_click);
+    void clear_buttons();
+
 private:
     bool hit_test_card(const card* c, Vector2 mouse_pos) const noexcept;
 
@@ -31,6 +38,17 @@ private:
     void draw_card(const card* c, Rectangle cr) noexcept;
 
     bool in_drag_chain(const card* drag_root, const card* c) const noexcept;
+
+    // UI internals
+    struct ui_button {
+        Rectangle rect{};
+        std::string label;
+        std::function<void()> on_click;
+        bool pressed = false;
+    };
+    void draw_buttons(Vector2 mouse_pos);
+    Rectangle next_button_rect() const noexcept;
+
 private:
     static constexpr int MARGIN = 20;
     static constexpr int CARD_W = 70;
@@ -48,11 +66,14 @@ private:
     const int _screen_width = 1280;
     const int _screen_height = 768;
     const char* _window_title = "Solitaire";
+    const char* _hud_message = "Moves: %u.\n 'Z' undo, 'R' new game";
 
     Texture2D _cardsTex{};
 
-    // drag&drop
-    const card* _drag_card = nullptr;
-    Vector2 _drag_mouse{0,0};
-    Vector2 _drag_offset{0,0};
+    // UI
+    std::vector<ui_button> _buttons;
+    static constexpr int BUTTON_W = 150;
+    static constexpr int BUTTON_H = 36;
+    static constexpr int BUTTON_COL_C = 3;
+    static constexpr int BUTTON_MARGIN = 10;
 };
