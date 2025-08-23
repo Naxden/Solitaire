@@ -328,12 +328,12 @@ void game::move_card(card* moved, pile& target)
                 moved->owner->first = nullptr;
             }
             {
-                auto traverser = moved;
+                auto it = moved;
                 do
                 {
-                    traverser->owner = &target;
-                    traverser = traverser->next;
-                } while (traverser && !is_from_deck);
+                    it->owner = &target;
+                    it = it->next;
+                } while (it && !is_from_deck);
             }
 
             newMove.prev_parent = moved_parent;
@@ -404,11 +404,13 @@ void game::undo_move()
             to_pile->first = nullptr;
         }
 
-        auto traverser = moved_card;
-        while (traverser)
         {
-            traverser->owner = from_pile;
-            traverser = traverser->next;
+            auto it = moved_card;
+            do
+            {
+                it->owner = from_pile;
+                it = it->next;
+            } while (it && !is_from_deck);
         }
 
         if (from_pile->empty())
@@ -484,7 +486,6 @@ game_state game::export_game_state() noexcept
 {
     return game_state
     {
-        .cards = _cards,
         .tableaus = _tableaus,
         .foundations = _foundations,
         .deck = _deck,
