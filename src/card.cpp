@@ -5,6 +5,9 @@ bool card::is_valid_placement(const card &other) const
 {
     if (!next && owner)
     {
+        bool is_other_from_deck = other.owner && 
+                other.owner->type == pile_type::deck;
+                
         switch (owner->type)
         {
         case pile_type::tableau:
@@ -17,8 +20,10 @@ bool card::is_valid_placement(const card &other) const
                 }
             }
             break;
+            
         case pile_type::foundation:
-            if (_suite == other._suite)
+            if (_suite == other._suite && 
+                (!other.next || is_other_from_deck))
             {
                 return static_cast<uint8_t>(_value) + 1 ==
                         static_cast<uint8_t>(other._value);
