@@ -38,7 +38,15 @@ class game
   /// @return A snapshot of the current game state.
   game_state export_game_state() noexcept;
 
+ private:
+  /// @brief Shuffles the deck of cards.
+  void shuffle_deck();
+
+  /// @brief Resets the board to the initial state.
+  void reset_board();
+
 #pragma region Debug
+
   /// @brief Prints all cards to the console (for debugging).
   void print_cards() const;
 
@@ -63,12 +71,6 @@ class game
   /// @brief Updates the game logic (if needed).
   void update();
 #pragma endregion
- private:
-  /// @brief Shuffles the deck of cards.
-  void shuffle_deck();
-
-  /// @brief Resets the board to the initial state.
-  void reset_board();
 
  private:
   /// @brief Array of all cards in the game.
