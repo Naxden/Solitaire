@@ -34,68 +34,6 @@ game::game()
   new_game();
 }
 
-void game::print_cards() const
-{
-  std::cout << "-----Cards------" << std::endl;
-  for (const auto& card : _cards)
-  {
-    print_card(card);
-  }
-}
-
-void game::print_board() const
-{
-  std::cout << "-----Tableau------" << std::endl;
-  for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
-  {
-    const auto& tableau = _tableaus[tIndex];
-    std::cout << std::format("Tableau{} has: {} cards. Top: ", tIndex,
-                             tableau.get_height());
-
-    if (!tableau.is_empty())
-    {
-      print_card(*tableau.get_last());
-    }
-    else
-    {
-      std::cout << "---" << std::endl;
-    }
-  }
-
-  std::cout << "-----Foundation------" << std::endl;
-  for (int fIndex = 0; fIndex < FOUNDATION_COUNT; fIndex++)
-  {
-    const auto& foundation = _foundations.at(fIndex);
-    std::cout << std::format("Foundation{} has: {} cards. Top: ", fIndex,
-                             foundation.get_height());
-
-    if (!foundation.is_empty())
-    {
-      print_card(*foundation.get_last());
-    }
-    else
-    {
-      std::cout << "---" << std::endl;
-    }
-  }
-
-  std::cout << "-----Deck------" << std::endl;
-  std::cout << std::format(
-      "Deck has: {} cards. Index {}. Current card: ", _deck.get_height(),
-      _deck.get_position_in_pile(_current_deck));
-  if (_current_deck)
-  {
-    print_card(*_current_deck);
-  }
-  else
-  {
-    std::cout << "---" << std::endl;
-  }
-
-  std::cout << "----Moves----" << std::endl;
-  std::cout << std::format("MovesCount: {}", _moves.size()) << std::endl;
-}
-
 void game::shuffle_deck()
 {
   std::random_device rd;
@@ -186,118 +124,6 @@ void game::next_deck()
     {
       _current_deck->face_up = true;
     }
-  }
-}
-
-void game::move_deck_to_tableau()
-{
-  if (_current_deck)
-  {
-    int targetIndex = -1;
-
-    for (uint8_t t = 0; t < TABLEAU_COUNT; t++)
-    {
-      auto& tableau = _tableaus[t];
-      if (tableau.is_empty())
-      {
-        if (_current_deck->get_value() == card_value::King)
-        {
-          targetIndex = t;
-          break;
-        }
-      }
-      else
-      {
-        auto top = tableau.get_last();
-        if (top->is_valid_placement(*_current_deck))
-        {
-          targetIndex = t;
-          break;
-        }
-      }
-    }
-
-    if (targetIndex >= 0)
-    {
-      move_card(_current_deck, _tableaus[targetIndex]);
-    }
-  }
-}
-
-void game::move_deck_to_foundation()
-{
-  if (_current_deck)
-  {
-    int foundationIndex = -1;
-
-    for (uint8_t i = 0; i < FOUNDATION_COUNT; i++)
-    {
-      auto& foundation = _foundations[i];
-      if (foundation.is_empty())
-      {
-        if (_current_deck->get_value() == card_value::Ace)
-        {
-          foundationIndex = i;
-          break;
-        }
-      }
-      else
-      {
-        auto top = foundation.get_last();
-        if (top->is_valid_placement(*_current_deck))
-        {
-          foundationIndex = i;
-          break;
-        }
-      }
-    }
-
-    if (foundationIndex >= 0)
-    {
-      move_card(_current_deck, _foundations[foundationIndex]);
-    }
-  }
-}
-
-void game::move_tableau_to_foundation()
-{
-  uint8_t foundationIndex = 0;
-  uint8_t tableauIndex = 0;
-  bool found = false;
-
-  for (uint8_t t = 0; t < TABLEAU_COUNT && !found; t++)
-  {
-    const auto tableauCard = _tableaus[t].get_last();
-
-    if (tableauCard)
-    {
-      for (uint8_t f = 0; f < FOUNDATION_COUNT && !found; f++)
-      {
-        const auto foundationCard = _foundations[f].get_last();
-        if ((tableauCard->get_value() == card_value::Ace && !foundationCard) ||
-            (foundationCard &&
-             foundationCard->is_valid_placement(*tableauCard)))
-        {
-          foundationIndex = f;
-          tableauIndex = t;
-          found = true;
-        }
-      }
-    }
-  }
-
-  if (found)
-  {
-    move_card(_tableaus[tableauIndex].get_last(),
-              _foundations[foundationIndex]);
-  }
-}
-
-void game::move_tableau_to_tableau(uint8_t from, uint8_t to)
-{
-  if (from < TABLEAU_COUNT && to < TABLEAU_COUNT && from != to)
-  {
-    move_card(_tableaus[from].get_last(), _tableaus[to]);
   }
 }
 
@@ -420,6 +246,213 @@ void game::undo_move()
   }
 }
 
+game_state game::export_game_state() noexcept
+{
+  return game_state{.tableaus = _tableaus,
+                    .foundations = _foundations,
+                    .deck = _deck,
+                    .current_deck = _current_deck,
+                    .moves = _moves};
+}
+
+void game::reset_board()
+{
+  for (auto& tPile : _tableaus)
+  {
+    tPile.first = nullptr;
+  }
+
+  for (auto& fPile : _foundations)
+  {
+    fPile.first = nullptr;
+  }
+
+  _deck.first = nullptr;
+
+  for (auto& card : _cards)
+  {
+    card.next = nullptr;
+    card.owner = nullptr;
+    card.face_up = false;
+  }
+}
+
+#pragma region Debug
+
+void game::print_cards() const
+{
+  std::cout << "-----Cards------" << std::endl;
+  for (const auto& card : _cards)
+  {
+    print_card(card);
+  }
+}
+
+void game::print_board() const
+{
+  std::cout << "-----Tableau------" << std::endl;
+  for (int tIndex = 0; tIndex < TABLEAU_COUNT; tIndex++)
+  {
+    const auto& tableau = _tableaus[tIndex];
+    std::cout << std::format("Tableau{} has: {} cards. Top: ", tIndex,
+                             tableau.get_height());
+
+    if (!tableau.is_empty())
+    {
+      print_card(*tableau.get_last());
+    }
+    else
+    {
+      std::cout << "---" << std::endl;
+    }
+  }
+
+  std::cout << "-----Foundation------" << std::endl;
+  for (int fIndex = 0; fIndex < FOUNDATION_COUNT; fIndex++)
+  {
+    const auto& foundation = _foundations.at(fIndex);
+    std::cout << std::format("Foundation{} has: {} cards. Top: ", fIndex,
+                             foundation.get_height());
+
+    if (!foundation.is_empty())
+    {
+      print_card(*foundation.get_last());
+    }
+    else
+    {
+      std::cout << "---" << std::endl;
+    }
+  }
+
+  std::cout << "-----Deck------" << std::endl;
+  std::cout << std::format(
+      "Deck has: {} cards. Index {}. Current card: ", _deck.get_height(),
+      _deck.get_position_in_pile(_current_deck));
+  if (_current_deck)
+  {
+    print_card(*_current_deck);
+  }
+  else
+  {
+    std::cout << "---" << std::endl;
+  }
+
+  std::cout << "----Moves----" << std::endl;
+  std::cout << std::format("MovesCount: {}", _moves.size()) << std::endl;
+}
+
+void game::move_deck_to_tableau()
+{
+  if (_current_deck)
+  {
+    int targetIndex = -1;
+
+    for (uint8_t t = 0; t < TABLEAU_COUNT; t++)
+    {
+      auto& tableau = _tableaus[t];
+      if (tableau.is_empty())
+      {
+        if (_current_deck->get_value() == card_value::King)
+        {
+          targetIndex = t;
+          break;
+        }
+      }
+      else
+      {
+        auto top = tableau.get_last();
+        if (top->is_valid_placement(*_current_deck))
+        {
+          targetIndex = t;
+          break;
+        }
+      }
+    }
+
+    if (targetIndex >= 0)
+    {
+      move_card(_current_deck, _tableaus[targetIndex]);
+    }
+  }
+}
+
+void game::move_deck_to_foundation()
+{
+  if (_current_deck)
+  {
+    int foundationIndex = -1;
+
+    for (uint8_t i = 0; i < FOUNDATION_COUNT; i++)
+    {
+      auto& foundation = _foundations[i];
+      if (foundation.is_empty())
+      {
+        if (_current_deck->get_value() == card_value::Ace)
+        {
+          foundationIndex = i;
+          break;
+        }
+      }
+      else
+      {
+        auto top = foundation.get_last();
+        if (top->is_valid_placement(*_current_deck))
+        {
+          foundationIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (foundationIndex >= 0)
+    {
+      move_card(_current_deck, _foundations[foundationIndex]);
+    }
+  }
+}
+
+void game::move_tableau_to_foundation()
+{
+  uint8_t foundationIndex = 0;
+  uint8_t tableauIndex = 0;
+  bool found = false;
+
+  for (uint8_t t = 0; t < TABLEAU_COUNT && !found; t++)
+  {
+    const auto tableauCard = _tableaus[t].get_last();
+
+    if (tableauCard)
+    {
+      for (uint8_t f = 0; f < FOUNDATION_COUNT && !found; f++)
+      {
+        const auto foundationCard = _foundations[f].get_last();
+        if ((tableauCard->get_value() == card_value::Ace && !foundationCard) ||
+            (foundationCard &&
+             foundationCard->is_valid_placement(*tableauCard)))
+        {
+          foundationIndex = f;
+          tableauIndex = t;
+          found = true;
+        }
+      }
+    }
+  }
+
+  if (found)
+  {
+    move_card(_tableaus[tableauIndex].get_last(),
+              _foundations[foundationIndex]);
+  }
+}
+
+void game::move_tableau_to_tableau(uint8_t from, uint8_t to)
+{
+  if (from < TABLEAU_COUNT && to < TABLEAU_COUNT && from != to)
+  {
+    move_card(_tableaus[from].get_last(), _tableaus[to]);
+  }
+}
+
 bool parse_t_command(const std::string& cmd, int& a, int& b)
 {
   if (cmd.size() == 3 && cmd[0] == 't' && std::isdigit(cmd[1]) &&
@@ -470,33 +503,4 @@ void game::update()
   }
 }
 
-game_state game::export_game_state() noexcept
-{
-  return game_state{.tableaus = _tableaus,
-                    .foundations = _foundations,
-                    .deck = _deck,
-                    .current_deck = _current_deck,
-                    .moves = _moves};
-}
-
-void game::reset_board()
-{
-  for (auto& tPile : _tableaus)
-  {
-    tPile.first = nullptr;
-  }
-
-  for (auto& fPile : _foundations)
-  {
-    fPile.first = nullptr;
-  }
-
-  _deck.first = nullptr;
-
-  for (auto& card : _cards)
-  {
-    card.next = nullptr;
-    card.owner = nullptr;
-    card.face_up = false;
-  }
-}
+#pragma endregion

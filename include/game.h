@@ -19,17 +19,31 @@ class game
  public:
   game();
 
-  /// @brief Prints all cards to the console (for debugging).
-  void print_cards() const;
-
-  /// @brief Prints the current board state to the console (for debugging).
-  void print_board() const;
-
   /// @brief Clears state and Starts a new game.
   void new_game();
 
   /// @brief Advances the deck to the next card (draws a card).
   void next_deck();
+
+  /// @brief Moves a card (and its chain) to the target pile if the move is
+  /// valid.
+  /// @param moved Pointer to the first card to move.
+  /// @param target Reference to the target pile.
+  void move_card(card* moved, pile& target);
+
+  /// @brief Undoes the last move, if possible.
+  void undo_move();
+
+  /// @brief Exports the current game state for rendering.
+  /// @return A snapshot of the current game state.
+  game_state export_game_state() noexcept;
+
+#pragma region Debug
+  /// @brief Prints all cards to the console (for debugging).
+  void print_cards() const;
+
+  /// @brief Prints the current board state to the console (for debugging).
+  void print_board() const;
 
   /// @brief Moves the current deck card to a tableau pile if possible.
   void move_deck_to_tableau();
@@ -46,22 +60,9 @@ class game
   /// @param to Index of the target tableau pile.
   void move_tableau_to_tableau(uint8_t from, uint8_t to);
 
-  /// @brief Moves a card (and its chain) to the target pile if the move is
-  /// valid.
-  /// @param moved Pointer to the first card to move.
-  /// @param target Reference to the target pile.
-  void move_card(card* moved, pile& target);
-
-  /// @brief Undoes the last move, if possible.
-  void undo_move();
-
   /// @brief Updates the game logic (if needed).
   void update();
-
-  /// @brief Exports the current game state for rendering.
-  /// @return A snapshot of the current game state.
-  game_state export_game_state() noexcept;
-
+#pragma endregion
  private:
   /// @brief Shuffles the deck of cards.
   void shuffle_deck();
