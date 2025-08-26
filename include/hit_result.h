@@ -5,6 +5,6 @@ struct pile;
 
 struct hit_result
 {
-    card* hit_card;
-    pile* hit_pile;
+  card* hit_card;
+  pile* hit_pile;
 };
