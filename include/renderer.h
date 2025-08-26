@@ -107,6 +107,7 @@ class renderer
   const int _screen_height = 768;
   const char* _window_title = "Solitaire";
   const char* _hud_message = "Moves: %u.\n 'Z' to undo, 'R' to new game";
+  const int _refresh_rate = 144;
 
   Texture2D _cardsTex{};
 

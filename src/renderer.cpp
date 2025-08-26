@@ -13,6 +13,8 @@ renderer::renderer()
   {
     SetTextureFilter(_cardsTex, TEXTURE_FILTER_BILINEAR);
   }
+
+  SetTargetFPS(_refresh_rate);
 }
 
 renderer::~renderer()
