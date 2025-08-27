@@ -51,6 +51,9 @@ class card
   /// @brief Checks if other is valid for the next card
   /// @param other Card to be tested
   bool is_valid_placement(const card& other) const;
+  bool is_valid_placement(const card* other) const;
+
+  void reset() noexcept;
 
  public:
   card* next = nullptr;

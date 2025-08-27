@@ -14,25 +14,32 @@ constexpr uint8_t CARDS_COUNT = COLOR_COUNT * VALUE_COUNT;
 struct game_state;
 struct hit_result;
 
+enum class game_status
+{
+  in_progress,
+  won,
+  lost
+};
+
 class game
 {
  public:
   game();
 
   /// @brief Clears state and Starts a new game.
-  void new_game();
+  void new_game() noexcept;
 
   /// @brief Advances the deck to the next card (draws a card).
-  void next_deck();
+  void next_deck() noexcept;
 
   /// @brief Moves a card (and its chain) to the target pile if the move is
   /// valid.
   /// @param moved Pointer to the first card to move.
   /// @param target Reference to the target pile.
-  void move_card(card* moved, pile& target);
+  void move_card(card* moved, pile& target) noexcept;
 
   /// @brief Undoes the last move, if possible.
-  void undo_move();
+  void undo_move() noexcept;
 
   /// @brief Exports the current game state for rendering.
   /// @return A snapshot of the current game state.
@@ -40,10 +47,13 @@ class game
 
  private:
   /// @brief Shuffles the deck of cards.
-  void shuffle_deck();
+  void shuffle_deck() noexcept;
 
   /// @brief Resets the board to the initial state.
-  void reset_board();
+  void reset_board() noexcept;
+
+  bool any_possible_move() const noexcept;
+  void update_status() noexcept;
 
 #pragma region Debug
 
@@ -83,6 +93,8 @@ class game
   pile _deck{pile_type::deck, 0};
   card* _current_deck = nullptr;
   card* _picked_deck = nullptr;
+
+  game_status _status;
 
   std::stack<move> _moves;
 };

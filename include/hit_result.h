@@ -1,7 +1,7 @@
 #pragma once
 
 class card;
-struct pile;
+class pile;
 
 struct hit_result
 {

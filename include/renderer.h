@@ -8,7 +8,7 @@
 
 struct game_state;
 struct hit_result;
-struct pile;
+class pile;
 struct drag_overlay;
 class card;
 

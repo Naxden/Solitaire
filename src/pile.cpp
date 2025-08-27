@@ -16,18 +16,6 @@ uint8_t pile::get_height() const noexcept
   return height;
 }
 
-card *pile::get_last() const noexcept
-{
-  auto card = first;
-
-  while (card && card->next)
-  {
-    card = card->next;
-  }
-
-  return card;
-}
-
 int8_t pile::get_position_in_pile(const card *c) const noexcept
 {
   int8_t index = 0;
@@ -38,69 +26,103 @@ int8_t pile::get_position_in_pile(const card *c) const noexcept
   return -1;
 }
 
-void pile::erase_single_from_pile(const card *c) noexcept
+void pile::erase_from_pile(card *c) noexcept
 {
-  if (c && !is_empty())
+  if (c && !is_empty() && c->owner == this)
   {
-    card *parent = get_first();
-    if (parent == c)
+    auto c_parent = c->get_parent();
+    bool is_deck = type == pile_type::deck;
+
+
+    if (!c_parent)
     {
-      first = c->next;
+      first = is_deck ? first->next : nullptr;
     }
     else
     {
-      while (parent && parent->next != c)
-      {
-        parent = parent->next;
-      }
+      c_parent->next = is_deck ? c->next : nullptr;
 
-      if (parent)
+      if (!is_deck)
       {
-        parent->next = c->next;
+        for (auto it = c; it; it = it->next)
+        {
+          it->owner = nullptr;
+        }
+      }
+      else
+      {
+        c->next = nullptr;
       }
     }
+
+    update_last();
   }
 }
 
-bool pile::is_valid_first_placement(const card *c) const noexcept
-{
-  if (c && is_empty())
-  {
-    switch (type)
-    {
-      case pile_type::tableau:
-        return c->get_value() == card_value::King;
-      case pile_type::foundation:
-        return c->get_value() == card_value::Ace;
-      default:
-        break;
-    }
-  }
-  return false;
-}
-
-bool pile::try_assign_as_child(card *c) noexcept
+bool pile::is_valid_placement(const card *c) const noexcept
 {
   if (c)
   {
     if (is_empty())
     {
-      if (is_valid_first_placement(c))
+      switch (type)
       {
-        first = c;
-        return true;
+        case pile_type::tableau:
+          return c->get_value() == card_value::King;
+        case pile_type::foundation:
+          return c->get_value() == card_value::Ace;
+        default:
+          break;
       }
     }
     else
     {
-      auto target_card = get_last();
-      if (target_card->is_valid_placement(*c))
+      return get_last()->is_valid_placement(c);
+    }
+  }
+  return false;
+}
+
+void pile::assign_as_child(card *c) noexcept
+{
+  if (c && c->owner != this)
+  {
+    if (is_empty())
+    {
+      c->owner = this;
+      first = c;
+      last = c;
+    }
+    else
+    {
+      last->next = c;
+      for (auto it = c; it; it = it->next)
       {
-        target_card->next = c;
-        return true;
+        it->owner = this;
+
+        if (!it->next)
+        {
+          last = it;
+        }
       }
     }
   }
+}
 
-  return false;
+void pile::reset() noexcept 
+{
+  last = nullptr;
+  first = nullptr;
+}
+
+void pile::update_last() noexcept
+{
+  auto it = first;
+
+  while (it && it->next)
+  {
+    it = it->next;
+  }
+
+  last = it;
 }

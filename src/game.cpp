@@ -34,14 +34,14 @@ game::game()
   new_game();
 }
 
-void game::shuffle_deck()
+void game::shuffle_deck() noexcept
 {
   std::random_device rd;
   std::mt19937 g(rd());
   std::shuffle(_cards.begin(), _cards.end(), g);
 }
 
-void game::new_game()
+void game::new_game() noexcept
 {
   reset_board();
 
@@ -59,18 +59,7 @@ void game::new_game()
 
     for (uint8_t tableuCards = 0; tableuCards <= tableauIndex; tableuCards++)
     {
-      auto& card = _cards[usedCardIndex++];
-
-      card.owner = &tableau;
-
-      if (!tableau.is_empty())
-      {
-        tableau.get_last()->next = &card;
-      }
-      else
-      {
-        tableau.first = &card;
-      }
+      tableau.assign_as_child(&_cards[usedCardIndex++]);
     }
 
     tableau.get_last()->face_up = true;
@@ -79,26 +68,16 @@ void game::new_game()
   auto deck_last = _deck.get_last();
   while (usedCardIndex < CARDS_COUNT)
   {
-    auto& card = _cards[usedCardIndex++];
-
-    card.owner = &_deck;
-    if (_deck.is_empty())
-    {
-      _deck.first = &card;
-    }
-    else if (deck_last)
-    {
-      deck_last->next = &card;
-    }
-
-    deck_last = &card;
+    _deck.assign_as_child(&_cards[usedCardIndex++]);
   }
 
   _current_deck = nullptr;
   _picked_deck = nullptr;
+
+  _status = game_status::in_progress;
 }
 
-void game::next_deck()
+void game::next_deck() noexcept
 {
   if (!_deck.is_empty())
   {
@@ -127,55 +106,38 @@ void game::next_deck()
   }
 }
 
-void game::move_card(card* moved, pile& target)
+void game::move_card(card* moved, pile& target) noexcept
 {
-  if (moved)
+  if (moved && moved->owner)
   {
-    auto moved_parent = moved->get_parent();
-
-    if (target.try_assign_as_child(moved))
+    if (target.is_valid_placement(moved))
     {
-      move newMove = {moved, moved->owner, &target};
+      move newMove{moved, moved->owner, &target};
       bool is_from_deck = moved->owner->type == pile_type::deck;
-
-      if (!is_from_deck && moved->owner->get_first() == moved)
-      {
-        moved->owner->first = nullptr;
-      }
-      {
-        auto it = moved;
-        do
-        {
-          it->owner = &target;
-          it = it->next;
-        } while (it && !is_from_deck);
-      }
-
+      auto moved_parent = moved->get_parent();
+      
       newMove.prev_parent = moved_parent;
       if (is_from_deck)
       {
-        _picked_deck = _current_deck->next;
-        _deck.erase_single_from_pile(_current_deck);
-        _current_deck->next = nullptr;
+        _picked_deck = moved->next;
         _current_deck = nullptr;
       }
-      else if (moved_parent)
+      else if (moved_parent && !moved_parent->face_up) 
       {
-        moved_parent->next = nullptr;
-
-        if (!moved_parent->face_up)
-        {
-          moved_parent->face_up = true;
-          newMove.revealed_card = true;
-        }
+        moved_parent->face_up = true;
+        newMove.revealed_card = true;
       }
 
+      moved->owner->erase_from_pile(moved);
+      target.assign_as_child(moved);
+      
       _moves.push(newMove);
+      update_status();
     }
   }
 }
 
-void game::undo_move()
+void game::undo_move() noexcept
 {
   if (!_moves.empty())
   {
@@ -248,32 +210,47 @@ void game::undo_move()
 
 game_state game::export_game_state() noexcept
 {
-  return game_state{.tableaus = _tableaus,
+  return game_state{.status = _status,
+                    .tableaus = _tableaus,
                     .foundations = _foundations,
                     .deck = _deck,
                     .current_deck = _current_deck,
                     .moves = _moves};
 }
 
-void game::reset_board()
+void game::reset_board() noexcept
 {
   for (auto& tPile : _tableaus)
   {
-    tPile.first = nullptr;
+    tPile.reset();
   }
 
   for (auto& fPile : _foundations)
   {
-    fPile.first = nullptr;
+    fPile.reset();
   }
 
-  _deck.first = nullptr;
+  _deck.reset();
 
   for (auto& card : _cards)
   {
-    card.next = nullptr;
-    card.owner = nullptr;
-    card.face_up = false;
+    card.reset();
+  }
+}
+
+bool game::any_possible_move() const noexcept
+{
+  std::vector<card*> possible_target;
+  possible_target.reserve(TABLEAU_COUNT + FOUNDATION_COUNT);
+
+
+  return false;
+}
+
+void game::update_status() noexcept
+{
+  if (_status == game_status::in_progress)
+  {
   }
 }
 

@@ -55,11 +55,7 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
 
     if (drop_pile)
     {
-      if (drop_pile->is_empty())
-        drop_valid =
-            drop_pile->is_valid_first_placement(const_cast<card*>(drag->root));
-      else
-        drop_valid = drop_pile->get_last()->is_valid_placement(*drag->root);
+      drop_valid = drop_pile->is_valid_placement(const_cast<card*>(drag->root));
     }
   }
 
