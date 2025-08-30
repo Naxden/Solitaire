@@ -87,25 +87,28 @@ void pile::assign_as_child(card *c) noexcept
 {
   if (c && c->owner != this)
   {
-    if (is_empty())
-    {
-      first = c;
-      last = c;
-    }
-    else
-    {
-      last->next = c;
-    }
-    
+    card* c_last = nullptr;
+
     for (auto it = c; it; it = it->next)
     {
       it->owner = this;
 
       if (!it->next)
       {
-        last = it;
+        c_last = it;
       }
     }
+
+    if (is_empty())
+    {
+      first = c;
+    }
+    else
+    {
+      last->next = c;
+    }
+    
+    last = c_last;
   }
 }
 
@@ -114,26 +117,27 @@ void pile::assign_as_child(card *c, card *parent) noexcept
   if (c && c->owner != this)
   {
     auto is_from_deck = type == pile_type::deck;
-    card* last_c_child = nullptr;
+    card* c_last = nullptr;
     for (auto it = c; it; it = it->next)
     {
       it->owner = this;
       
       if (!it->next)
       {
-        last_c_child = it;
+        c_last = it;
       }
     }
 
     if (parent && parent->owner == this)
     {
       auto current_child = parent->next;
+      
       parent->next = c;
       if (current_child)
       {
-        if (last_c_child)
+        if (c_last)
         {
-          last_c_child->next = current_child;
+          c_last->next = current_child;
         }
         else
         {
