@@ -33,25 +33,25 @@ void pile::erase_from_pile(card *c) noexcept
     auto c_parent = c->get_parent();
     bool is_deck = type == pile_type::deck;
 
-
-    if (!c_parent)
+    if (c_parent)
     {
-      first = is_deck ? first->next : nullptr;
+      c_parent->next = is_deck ? c->next : nullptr;
     }
     else
     {
-      c_parent->next = is_deck ? c->next : nullptr;
-
-      if (!is_deck)
+      first = is_deck ? first->next : nullptr;
+    }
+    
+    c->owner = nullptr;
+    if (is_deck)
+    {
+      c->next = nullptr;
+    }
+    else
+    {
+      for (auto it = c->next; it; it = it->next)
       {
-        for (auto it = c; it; it = it->next)
-        {
-          it->owner = nullptr;
-        }
-      }
-      else
-      {
-        c->next = nullptr;
+        it->owner = nullptr;
       }
     }
 
@@ -89,27 +89,72 @@ void pile::assign_as_child(card *c) noexcept
   {
     if (is_empty())
     {
-      c->owner = this;
       first = c;
       last = c;
     }
     else
     {
       last->next = c;
-      for (auto it = c; it; it = it->next)
-      {
-        it->owner = this;
+    }
+    
+    for (auto it = c; it; it = it->next)
+    {
+      it->owner = this;
 
-        if (!it->next)
-        {
-          last = it;
-        }
+      if (!it->next)
+      {
+        last = it;
       }
     }
   }
 }
 
-void pile::reset() noexcept 
+void pile::assign_as_child(card *c, card *parent) noexcept
+{
+  if (c && c->owner != this)
+  {
+    auto is_from_deck = type == pile_type::deck;
+    card* last_c_child = nullptr;
+    for (auto it = c; it; it = it->next)
+    {
+      it->owner = this;
+      
+      if (!it->next)
+      {
+        last_c_child = it;
+      }
+    }
+
+    if (parent && parent->owner == this)
+    {
+      auto current_child = parent->next;
+      parent->next = c;
+      if (current_child)
+      {
+        if (last_c_child)
+        {
+          last_c_child->next = current_child;
+        }
+        else
+        {
+          c->next = current_child;
+        }
+      }
+    }
+    else if (is_from_deck)
+    {
+      if (!is_empty())
+      {
+        c->next = first;
+      }
+      first = c;
+    }
+
+    update_last();
+  }
+}
+
+void pile::reset() noexcept
 {
   last = nullptr;
   first = nullptr;

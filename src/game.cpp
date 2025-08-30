@@ -151,48 +151,23 @@ void game::undo_move() noexcept
     const auto is_from_deck = from_pile->type == pile_type::deck;
 
     moved_card->face_up = !is_from_deck;
-    if (prev_parent)
+    to_pile->erase_from_pile(moved_card);
+    if (is_from_deck)
     {
-      if (is_from_deck)
-      {
-        moved_card->next = prev_parent->next;
-      }
-
-      prev_parent->next = moved_card;
-
+      from_pile->assign_as_child(moved_card, prev_parent);
+    }
+    else if (prev_parent)
+    {
+      from_pile->assign_as_child(moved_card, prev_parent);
+      
       if (last_move.revealed_card)
       {
         prev_parent->face_up = false;
       }
     }
-    else if (is_from_deck)
+    else
     {
-      moved_card->next = from_pile->first;
-      from_pile->first = moved_card;
-    }
-
-    auto to_pile_parent = moved_card->get_parent();
-    if (to_pile_parent)
-    {
-      to_pile_parent->next = nullptr;
-    }
-    if (to_pile->get_first() == moved_card)
-    {
-      to_pile->first = nullptr;
-    }
-
-    {
-      auto it = moved_card;
-      do
-      {
-        it->owner = from_pile;
-        it = it->next;
-      } while (it && !is_from_deck);
-    }
-
-    if (from_pile->is_empty())
-    {
-      from_pile->first = moved_card;
+      from_pile->assign_as_child(moved_card);
     }
 
     if (_picked_deck && _picked_deck == moved_card->next)

@@ -45,6 +45,7 @@ public:
   /// @param c Card to be added
   /// @return Assignment result
   void assign_as_child(card* c) noexcept;
+  void assign_as_child(card* c, card* parent) noexcept;
 
   void reset() noexcept;
  private:
