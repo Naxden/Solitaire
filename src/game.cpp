@@ -269,7 +269,7 @@ bool game::has_available_moves() const noexcept
       {
         if (&t_from == &t_to)
         {
-          break;
+          continue;;
         }
         if (t_to.is_valid_placement(from_card))
         {
