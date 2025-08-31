@@ -115,14 +115,14 @@ void game::move_card(card* moved, pile& target) noexcept
       move newMove{moved, moved->owner, &target};
       bool is_from_deck = moved->owner->type == pile_type::deck;
       auto moved_parent = moved->get_parent();
-      
+
       newMove.prev_parent = moved_parent;
       if (is_from_deck)
       {
         _picked_deck = moved->next;
         _current_deck = nullptr;
       }
-      else if (moved_parent && !moved_parent->face_up) 
+      else if (moved_parent && !moved_parent->face_up)
       {
         moved_parent->face_up = true;
         newMove.revealed_card = true;
@@ -130,7 +130,7 @@ void game::move_card(card* moved, pile& target) noexcept
 
       moved->owner->erase_from_pile(moved);
       target.assign_as_child(moved);
-      
+
       _moves.push(newMove);
       update_status();
     }
@@ -159,7 +159,7 @@ void game::undo_move() noexcept
     else if (prev_parent)
     {
       from_pile->assign_as_child(moved_card, prev_parent);
-      
+
       if (last_move.revealed_card)
       {
         prev_parent->face_up = false;
@@ -180,6 +180,8 @@ void game::undo_move() noexcept
       _current_deck->face_up = true;
       _picked_deck = nullptr;
     }
+
+    update_status();
   }
 }
 
@@ -213,19 +215,98 @@ void game::reset_board() noexcept
   }
 }
 
-bool game::any_possible_move() const noexcept
+bool game::has_available_moves() const noexcept
 {
-  std::vector<card*> possible_target;
-  possible_target.reserve(TABLEAU_COUNT + FOUNDATION_COUNT);
+  // tableau to foundation
+  for (const auto& t : _tableaus)
+  {
+    const auto t_last = t.get_last();
+    if (t_last)
+    {
+      for (auto& f : _foundations)
+      {
+        if (f.is_valid_placement(t_last))
+        {
+          return true;
+        }
+      }
+    }
+  }
 
+  // deck to foundation or tableau
+  for (auto d_card = _deck.first; d_card; d_card = d_card->next)
+  {
+    for (const auto& t : _tableaus)
+    {
+      if (t.is_valid_placement(d_card))
+      {
+        return true;
+      }
+    }
+    for (const auto& f : _foundations)
+    {
+      if (f.is_valid_placement(d_card))
+      {
+        return true;
+      }
+    }
+  }
+
+  // tableau to tableau
+  for (const auto& t_from : _tableaus)
+  {
+    card* from_card = t_from.get_first();
+    card* from_parent = nullptr;
+    while (from_card && !from_card->face_up)
+    {
+      from_parent = from_card;
+      from_card = from_card->next;
+    }
+
+    if (from_parent && from_card)
+    {
+      for (const auto& t_to : _tableaus)
+      {
+        if (&t_from == &t_to)
+        {
+          break;
+        }
+        if (t_to.is_valid_placement(from_card))
+        {
+          return true;
+        }
+      }
+    }
+  }
 
   return false;
 }
 
+bool game::check_win() const noexcept
+{
+  for (auto& card : _cards)
+  {
+    if (!card.face_up)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 void game::update_status() noexcept
 {
-  if (_status == game_status::in_progress)
+  if (check_win())
   {
+    _status = game_status::won;
+  }
+  else if (!has_available_moves())
+  {
+    _status = game_status::lost;
+  }
+  else
+  {
+    _status = game_status::in_progress;
   }
 }
 
