@@ -130,7 +130,7 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   }
 
   // HUD
-  DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN,
+  DrawText(TextFormat(_hud_message, state.moves.size(), state.status), MARGIN,
            GetScreenHeight() - 60, 20, YELLOW);
 
   // UI buttons
