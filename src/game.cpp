@@ -195,6 +195,29 @@ game_state game::export_game_state() noexcept
                     .moves = _moves};
 }
 
+std::optional<move> game::next_auto_move() noexcept
+{
+  for (auto& t : _tableaus)
+  {
+    auto t_card = t.get_last();
+
+    if (t_card)
+    {
+      for (auto& f : _foundations)
+      {
+        if (f.is_valid_placement(t_card))
+        {
+          return std::optional<move>(move{
+            .moved_card = t_card,
+            .to_pile = &f,
+          });
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 void game::reset_board() noexcept
 {
   for (auto& tPile : _tableaus)
@@ -213,6 +236,18 @@ void game::reset_board() noexcept
   {
     card.reset();
   }
+}
+
+bool game::has_auto_completion_finished() const noexcept
+{
+  for (const auto& c : _cards)
+  {
+    if (!c.owner || c.owner->type != pile_type::foundation)
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool game::has_available_moves() const noexcept
@@ -269,7 +304,8 @@ bool game::has_available_moves() const noexcept
       {
         if (&t_from == &t_to)
         {
-          continue;;
+          continue;
+          ;
         }
         if (t_to.is_valid_placement(from_card))
         {
@@ -296,17 +332,27 @@ bool game::check_win() const noexcept
 
 void game::update_status() noexcept
 {
-  if (check_win())
+  if (_status == game_status::auto_solve)
   {
-    _status = game_status::won;
-  }
-  else if (!has_available_moves())
-  {
-    _status = game_status::lost;
+    if (has_auto_completion_finished())
+    {
+      _status = game_status::won;
+    }
   }
   else
   {
-    _status = game_status::in_progress;
+    if (check_win())
+    {
+      _status = game_status::auto_solve;
+    }
+    else if (!has_available_moves())
+    {
+      _status = game_status::lost;
+    }
+    else
+    {
+      _status = game_status::in_progress;
+    }
   }
 }
 

@@ -9,12 +9,14 @@ int main()
   renderer renderer;
   game game;
   drag_controller drag;
+  std::optional<move> auto_move;
 
   renderer.register_button("New Game",
                            [&]()
                            {
                              game.new_game();
                              drag = drag_controller();
+                             auto_move = std::nullopt;
                            });
 
   renderer.register_button("Undo move", [&]() { game.undo_move(); });
@@ -24,38 +26,59 @@ int main()
     game_state state = game.export_game_state();
     Vector2 mouse = GetMousePosition();
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (state.status == game_status::auto_solve)
     {
-      auto hit = renderer.hit_test(state, mouse);
-
-      if (hit.hit_card)
+      if (!auto_move)
       {
-        drag.start(hit.hit_card, mouse, renderer.card_rect_draw(hit.hit_card));
+        auto_move = game.next_auto_move();
       }
-      else if (hit.hit_pile && hit.hit_pile->type == pile_type::deck)
+      else
       {
-        game.next_deck();
+        auto target_rect = renderer.pile_rect_hit(*auto_move.value().to_pile);
+        mouse = Vector2{target_rect.x + target_rect.width / 2,
+                        target_rect.y + target_rect.height / 2};
+        
+        game.move_card(auto_move.value().moved_card, *auto_move.value().to_pile);
+        auto_move = std::nullopt;
       }
     }
-    else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    else
     {
-      drag.update(mouse);
-    }
-    else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
-    {
-      auto hit = renderer.hit_test(state, mouse);
-      drag.end(game, hit);
-    }
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+      {
+        auto hit = renderer.hit_test(state, mouse);
 
-    if (IsKeyPressed(KEY_Z))
-    {
-      game.undo_move();
+        if (hit.hit_card)
+        {
+          drag.start(hit.hit_card, mouse,
+                     renderer.card_rect_draw(hit.hit_card));
+        }
+        else if (hit.hit_pile && hit.hit_pile->type == pile_type::deck)
+        {
+          game.next_deck();
+        }
+      }
+      else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+      {
+        drag.update(mouse);
+      }
+      else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+      {
+        auto hit = renderer.hit_test(state, mouse);
+        drag.end(game, hit);
+      }
+
+      if (IsKeyPressed(KEY_Z))
+      {
+        game.undo_move();
+      }
     }
 
     if (IsKeyPressed(KEY_R))
     {
       game.new_game();
       drag = drag_controller();
+      auto_move = std::nullopt;
     }
 
     renderer.update(state, mouse, drag.overlay());

@@ -17,8 +17,9 @@ struct hit_result;
 enum class game_status : uint8_t
 {
   in_progress,
+  auto_solve,
   won,
-  lost
+  lost,
 };
 
 class game
@@ -44,7 +45,7 @@ class game
   /// @brief Exports the current game state for rendering.
   /// @return A snapshot of the current game state.
   game_state export_game_state() noexcept;
-
+  std::optional<move> next_auto_move() noexcept;
  private:
   /// @brief Shuffles the deck of cards.
   void shuffle_deck() noexcept;
@@ -52,6 +53,7 @@ class game
   /// @brief Resets the board to the initial state.
   void reset_board() noexcept;
 
+  bool has_auto_completion_finished() const noexcept;
   bool has_available_moves() const noexcept;
   bool check_win() const noexcept;
   void update_status() noexcept;
