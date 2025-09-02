@@ -308,7 +308,7 @@ hit_result renderer::hit_test_rect(const game_state& state,
 
   for (uint8_t t_index = 0;
        t_index < TABLEAU_COUNT && !empty_tableau_slot && !target_card;
-       ++t_index)
+       t_index++)
   {
     auto& t = state.tableaus[t_index];
     Rectangle col = pile_rect_hit(t);
@@ -420,11 +420,16 @@ Rectangle renderer::card_rect_hit(const card* c) const noexcept
     return base_card_rect;
   }
 
-  return Rectangle();
+  return Rectangle{};
 }
 
 Rectangle renderer::pile_rect_hit(const pile& p) const noexcept
 {
+  auto last_card = p.get_last();
+  if (last_card && p.type != pile_type::deck)
+  {
+    return card_rect_hit(p.get_last());
+  }
   Rectangle rec{
       .width = static_cast<float>(CARD_W),
       .height = static_cast<float>(CARD_H),
@@ -444,7 +449,8 @@ Rectangle renderer::pile_rect_hit(const pile& p) const noexcept
       break;
     case pile_type::deck:
       rec.x = static_cast<float>(MARGIN);
-      rec.y = static_cast<float>(p.get_height() * DEC_SPACING_Y + MARGIN);
+      rec.y = static_cast<float>(
+          std::max(0, p.get_height() - 1) * DEC_SPACING_Y + MARGIN);
       break;
     default:
       break;
