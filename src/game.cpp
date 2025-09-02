@@ -320,6 +320,10 @@ bool game::has_available_moves() const noexcept
 
 bool game::check_win() const noexcept
 {
+  if (!_deck.is_empty())
+  {
+    return false;
+  }
   for (auto& card : _cards)
   {
     if (!card.face_up)

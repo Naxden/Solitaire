@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <stack>
 
 #include "card.h"
@@ -45,7 +46,11 @@ class game
   /// @brief Exports the current game state for rendering.
   /// @return A snapshot of the current game state.
   game_state export_game_state() noexcept;
+
+  /// @brief Returns the next card to finish the game (tableau to foundation) if
+  /// available
   std::optional<move> next_auto_move() noexcept;
+
  private:
   /// @brief Shuffles the deck of cards.
   void shuffle_deck() noexcept;
@@ -54,8 +59,12 @@ class game
   void reset_board() noexcept;
 
   bool has_auto_completion_finished() const noexcept;
+  /// @brief Checks whether the player has any move that will bring him closer
+  /// to victory
   bool has_available_moves() const noexcept;
+
   bool check_win() const noexcept;
+
   void update_status() noexcept;
 
 #pragma region Debug

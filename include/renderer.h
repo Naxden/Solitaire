@@ -12,6 +12,11 @@ class pile;
 struct drag_overlay;
 class card;
 
+inline Vector2 middle_of_rect(Rectangle rec) noexcept
+{
+  return Vector2{rec.x + rec.width / 2, rec.y + rec.height / 2};
+}
+
 class renderer
 {
  public:
@@ -49,6 +54,8 @@ class renderer
   /// @brief Removes all registered UI buttons.
   void clear_buttons();
 
+  /// @brief Returns the hit rectangle for a pile.
+  Rectangle pile_rect_hit(const pile& p) const noexcept;
  private:
   /// @brief Checks if a card is hit by the mouse position.
   bool hit_test_card(const card* c, Vector2 mouse_pos) const noexcept;
@@ -58,9 +65,6 @@ class renderer
 
   /// @brief Returns the hit rectangle for a card.
   Rectangle card_rect_hit(const card* c) const noexcept;
-
-  /// @brief Returns the hit rectangle for a pile.
-  Rectangle pile_rect_hit(const pile& p) const noexcept;
 
   /// @brief Returns the source rectangle in the card texture atlas for a card.
   Rectangle src_card_rect(const card* c) const noexcept;
