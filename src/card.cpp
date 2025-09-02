@@ -36,6 +36,22 @@ bool card::is_valid_placement(const card& other) const
   return false;
 }
 
+bool card::is_valid_placement(const card* other) const
+{
+  if (other)
+  {
+    return is_valid_placement(*other);
+  }
+  return false;
+}
+
+void card::reset() noexcept
+{
+  owner = nullptr;
+  next = nullptr;
+  face_up = false;
+}
+
 card* card::get_parent() const noexcept
 {
   if (owner)
@@ -51,5 +67,6 @@ card* card::get_parent() const noexcept
 
     return parent;
   }
+
   return nullptr;
 }

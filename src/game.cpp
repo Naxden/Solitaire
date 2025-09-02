@@ -34,14 +34,14 @@ game::game()
   new_game();
 }
 
-void game::shuffle_deck()
+void game::shuffle_deck() noexcept
 {
   std::random_device rd;
   std::mt19937 g(rd());
   std::shuffle(_cards.begin(), _cards.end(), g);
 }
 
-void game::new_game()
+void game::new_game() noexcept
 {
   reset_board();
 
@@ -59,18 +59,7 @@ void game::new_game()
 
     for (uint8_t tableuCards = 0; tableuCards <= tableauIndex; tableuCards++)
     {
-      auto& card = _cards[usedCardIndex++];
-
-      card.owner = &tableau;
-
-      if (!tableau.is_empty())
-      {
-        tableau.get_last()->next = &card;
-      }
-      else
-      {
-        tableau.first = &card;
-      }
+      tableau.assign_as_child(&_cards[usedCardIndex++]);
     }
 
     tableau.get_last()->face_up = true;
@@ -79,26 +68,16 @@ void game::new_game()
   auto deck_last = _deck.get_last();
   while (usedCardIndex < CARDS_COUNT)
   {
-    auto& card = _cards[usedCardIndex++];
-
-    card.owner = &_deck;
-    if (_deck.is_empty())
-    {
-      _deck.first = &card;
-    }
-    else if (deck_last)
-    {
-      deck_last->next = &card;
-    }
-
-    deck_last = &card;
+    _deck.assign_as_child(&_cards[usedCardIndex++]);
   }
 
   _current_deck = nullptr;
   _picked_deck = nullptr;
+
+  _status = game_status::in_progress;
 }
 
-void game::next_deck()
+void game::next_deck() noexcept
 {
   if (!_deck.is_empty())
   {
@@ -127,55 +106,38 @@ void game::next_deck()
   }
 }
 
-void game::move_card(card* moved, pile& target)
+void game::move_card(card* moved, pile& target) noexcept
 {
-  if (moved)
+  if (moved && moved->owner)
   {
-    auto moved_parent = moved->get_parent();
-
-    if (target.try_assign_as_child(moved))
+    if (target.is_valid_placement(moved))
     {
-      move newMove = {moved, moved->owner, &target};
+      move newMove{moved, moved->owner, &target};
       bool is_from_deck = moved->owner->type == pile_type::deck;
-
-      if (!is_from_deck && moved->owner->get_first() == moved)
-      {
-        moved->owner->first = nullptr;
-      }
-      {
-        auto it = moved;
-        do
-        {
-          it->owner = &target;
-          it = it->next;
-        } while (it && !is_from_deck);
-      }
+      auto moved_parent = moved->get_parent();
 
       newMove.prev_parent = moved_parent;
       if (is_from_deck)
       {
-        _picked_deck = _current_deck->next;
-        _deck.erase_single_from_pile(_current_deck);
-        _current_deck->next = nullptr;
+        _picked_deck = moved->next;
         _current_deck = nullptr;
       }
-      else if (moved_parent)
+      else if (moved_parent && !moved_parent->face_up)
       {
-        moved_parent->next = nullptr;
-
-        if (!moved_parent->face_up)
-        {
-          moved_parent->face_up = true;
-          newMove.revealed_card = true;
-        }
+        moved_parent->face_up = true;
+        newMove.revealed_card = true;
       }
 
+      moved->owner->erase_from_pile(moved);
+      target.assign_as_child(moved);
+
       _moves.push(newMove);
+      update_status();
     }
   }
 }
 
-void game::undo_move()
+void game::undo_move() noexcept
 {
   if (!_moves.empty())
   {
@@ -189,48 +151,23 @@ void game::undo_move()
     const auto is_from_deck = from_pile->type == pile_type::deck;
 
     moved_card->face_up = !is_from_deck;
-    if (prev_parent)
+    to_pile->erase_from_pile(moved_card);
+    if (is_from_deck)
     {
-      if (is_from_deck)
-      {
-        moved_card->next = prev_parent->next;
-      }
-
-      prev_parent->next = moved_card;
+      from_pile->assign_as_child(moved_card, prev_parent);
+    }
+    else if (prev_parent)
+    {
+      from_pile->assign_as_child(moved_card, prev_parent);
 
       if (last_move.revealed_card)
       {
         prev_parent->face_up = false;
       }
     }
-    else if (is_from_deck)
+    else
     {
-      moved_card->next = from_pile->first;
-      from_pile->first = moved_card;
-    }
-
-    auto to_pile_parent = moved_card->get_parent();
-    if (to_pile_parent)
-    {
-      to_pile_parent->next = nullptr;
-    }
-    if (to_pile->get_first() == moved_card)
-    {
-      to_pile->first = nullptr;
-    }
-
-    {
-      auto it = moved_card;
-      do
-      {
-        it->owner = from_pile;
-        it = it->next;
-      } while (it && !is_from_deck);
-    }
-
-    if (from_pile->is_empty())
-    {
-      from_pile->first = moved_card;
+      from_pile->assign_as_child(moved_card);
     }
 
     if (_picked_deck && _picked_deck == moved_card->next)
@@ -243,37 +180,183 @@ void game::undo_move()
       _current_deck->face_up = true;
       _picked_deck = nullptr;
     }
+
+    update_status();
   }
 }
 
 game_state game::export_game_state() noexcept
 {
-  return game_state{.tableaus = _tableaus,
+  return game_state{.status = _status,
+                    .tableaus = _tableaus,
                     .foundations = _foundations,
                     .deck = _deck,
                     .current_deck = _current_deck,
                     .moves = _moves};
 }
 
-void game::reset_board()
+std::optional<move> game::next_auto_move() noexcept
+{
+  for (auto& t : _tableaus)
+  {
+    auto t_card = t.get_last();
+
+    if (t_card)
+    {
+      for (auto& f : _foundations)
+      {
+        if (f.is_valid_placement(t_card))
+        {
+          return std::optional<move>(move{
+            .moved_card = t_card,
+            .to_pile = &f,
+          });
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+void game::reset_board() noexcept
 {
   for (auto& tPile : _tableaus)
   {
-    tPile.first = nullptr;
+    tPile.reset();
   }
 
   for (auto& fPile : _foundations)
   {
-    fPile.first = nullptr;
+    fPile.reset();
   }
 
-  _deck.first = nullptr;
+  _deck.reset();
 
   for (auto& card : _cards)
   {
-    card.next = nullptr;
-    card.owner = nullptr;
-    card.face_up = false;
+    card.reset();
+  }
+}
+
+bool game::has_auto_completion_finished() const noexcept
+{
+  for (const auto& c : _cards)
+  {
+    if (!c.owner || c.owner->type != pile_type::foundation)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool game::has_available_moves() const noexcept
+{
+  // tableau to foundation
+  for (const auto& t : _tableaus)
+  {
+    const auto t_last = t.get_last();
+    if (t_last)
+    {
+      for (auto& f : _foundations)
+      {
+        if (f.is_valid_placement(t_last))
+        {
+          return true;
+        }
+      }
+    }
+  }
+
+  // deck to foundation or tableau
+  for (auto d_card = _deck.first; d_card; d_card = d_card->next)
+  {
+    for (const auto& t : _tableaus)
+    {
+      if (t.is_valid_placement(d_card))
+      {
+        return true;
+      }
+    }
+    for (const auto& f : _foundations)
+    {
+      if (f.is_valid_placement(d_card))
+      {
+        return true;
+      }
+    }
+  }
+
+  // tableau to tableau
+  for (const auto& t_from : _tableaus)
+  {
+    card* from_card = t_from.get_first();
+    card* from_parent = nullptr;
+    while (from_card && !from_card->face_up)
+    {
+      from_parent = from_card;
+      from_card = from_card->next;
+    }
+
+    if (from_parent && from_card)
+    {
+      for (const auto& t_to : _tableaus)
+      {
+        if (&t_from == &t_to)
+        {
+          continue;
+          ;
+        }
+        if (t_to.is_valid_placement(from_card))
+        {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool game::check_win() const noexcept
+{
+  if (!_deck.is_empty())
+  {
+    return false;
+  }
+  for (auto& card : _cards)
+  {
+    if (!card.face_up)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+void game::update_status() noexcept
+{
+  if (_status == game_status::auto_solve)
+  {
+    if (has_auto_completion_finished())
+    {
+      _status = game_status::won;
+    }
+  }
+  else
+  {
+    if (check_win())
+    {
+      _status = game_status::auto_solve;
+    }
+    else if (!has_available_moves())
+    {
+      _status = game_status::lost;
+    }
+    else
+    {
+      _status = game_status::in_progress;
+    }
   }
 }
 

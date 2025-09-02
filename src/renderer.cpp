@@ -13,6 +13,8 @@ renderer::renderer()
   {
     SetTextureFilter(_cardsTex, TEXTURE_FILTER_BILINEAR);
   }
+
+  SetTargetFPS(_refresh_rate);
 }
 
 renderer::~renderer()
@@ -53,11 +55,7 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
 
     if (drop_pile)
     {
-      if (drop_pile->is_empty())
-        drop_valid =
-            drop_pile->is_valid_first_placement(const_cast<card*>(drag->root));
-      else
-        drop_valid = drop_pile->get_last()->is_valid_placement(*drag->root);
+      drop_valid = drop_pile->is_valid_placement(const_cast<card*>(drag->root));
     }
   }
 
@@ -132,7 +130,7 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   }
 
   // HUD
-  DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN,
+  DrawText(TextFormat(_hud_message, state.moves.size(), state.status), MARGIN,
            GetScreenHeight() - 60, 20, YELLOW);
 
   // UI buttons

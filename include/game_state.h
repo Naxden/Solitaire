@@ -3,6 +3,7 @@
 
 struct game_state
 {
+  game_status status;
   std::array<pile, TABLEAU_COUNT>& tableaus;
   std::array<pile, FOUNDATION_COUNT>& foundations;
   pile& deck;
