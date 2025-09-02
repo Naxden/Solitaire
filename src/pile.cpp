@@ -5,11 +5,9 @@
 uint8_t pile::get_height() const noexcept
 {
   uint8_t height = 0;
-  auto card = first;
 
-  while (card)
+  for (auto it = first; it; it = it->next)
   {
-    card = card->next;
     height++;
   }
 
@@ -19,9 +17,10 @@ uint8_t pile::get_height() const noexcept
 int8_t pile::get_position_in_pile(const card *c) const noexcept
 {
   int8_t index = 0;
-  for (auto card = first; card; card = card->next, index++)
+  for (auto card = first; card; card = card->next)
   {
     if (card == c) return index;
+    index++;
   }
   return -1;
 }
@@ -41,7 +40,7 @@ void pile::erase_from_pile(card *c) noexcept
     {
       first = is_deck ? first->next : nullptr;
     }
-    
+
     c->owner = nullptr;
     if (is_deck)
     {
@@ -87,7 +86,7 @@ void pile::assign_as_child(card *c) noexcept
 {
   if (c && c->owner != this)
   {
-    card* c_last = nullptr;
+    card *c_last = nullptr;
 
     for (auto it = c; it; it = it->next)
     {
@@ -107,7 +106,7 @@ void pile::assign_as_child(card *c) noexcept
     {
       last->next = c;
     }
-    
+
     last = c_last;
   }
 }
@@ -117,11 +116,11 @@ void pile::assign_as_child(card *c, card *parent) noexcept
   if (c && c->owner != this)
   {
     auto is_from_deck = type == pile_type::deck;
-    card* c_last = nullptr;
+    card *c_last = nullptr;
     for (auto it = c; it; it = it->next)
     {
       it->owner = this;
-      
+
       if (!it->next)
       {
         c_last = it;
@@ -131,7 +130,7 @@ void pile::assign_as_child(card *c, card *parent) noexcept
     if (parent && parent->owner == this)
     {
       auto current_child = parent->next;
-      
+
       parent->next = c;
       if (current_child)
       {

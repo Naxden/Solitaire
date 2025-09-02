@@ -1,6 +1,7 @@
 #include <optional>
 
 #include "move.h"
+#include "raylib.h"
 #include "raymath.h"
 
 constexpr float AUTO_MOVE_TIME = 0.45f;
