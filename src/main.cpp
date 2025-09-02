@@ -1,9 +1,9 @@
+#include "auto_move.h"
 #include "drag_controller.h"
 #include "game.h"
 #include "game_state.h"
 #include "hit_result.h"
 #include "renderer.h"
-#include "auto_move.h"
 
 int main()
 {
@@ -26,6 +26,8 @@ int main()
   {
     game_state state = game.export_game_state();
     Vector2 mouse = GetMousePosition();
+    auto drag_overlay = drag.overlay();
+
 
     if (state.status == game_status::auto_solve)
     {
@@ -35,8 +37,8 @@ int main()
         if (move_data)
         {
           auto_move.move_data = move_data;
-          auto target_card = auto_move.move_data.value().moved_card;
-          auto target_pile = auto_move.move_data.value().to_pile;
+          auto target_card = auto_move.move_data->moved_card;
+          auto target_pile = auto_move.move_data->to_pile;
 
           auto_move.from_pos =
               middle_of_rect(renderer.card_rect_draw(target_card));
@@ -57,8 +59,9 @@ int main()
         }
         else
         {
-          auto hit = renderer.hit_test(state, auto_move.to_pos);
-          drag.end(game, hit);
+          drag.end(
+              game,
+              hit_result { .hit_pile = auto_move.move_data->to_pile });
           auto_move.move_data = std::nullopt;
         }
       }
@@ -85,7 +88,12 @@ int main()
       }
       else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
       {
-        auto hit = renderer.hit_test(state, mouse);
+        hit_result hit{.hit_card = nullptr, .hit_pile = nullptr};
+        if (drag_overlay && drag_overlay->root)
+        {
+          hit = renderer.hit_test_drag(state, *drag_overlay);
+        }
+        
         drag.end(game, hit);
       }
 
@@ -102,7 +110,7 @@ int main()
       auto_move.move_data = std::nullopt;
     }
 
-    renderer.update(state, mouse, drag.overlay());
+    renderer.update(state, mouse, drag_overlay);
   }
   return 0;
 }

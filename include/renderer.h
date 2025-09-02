@@ -38,6 +38,8 @@ class renderer
   hit_result hit_test(const game_state& state,
                       Vector2 mouse_pos) const noexcept;
 
+  hit_result hit_test_drag(const game_state& state,
+                      const drag_overlay& drag) const noexcept;
   bool should_close() const noexcept;
 
   /// @brief Returns the drawing rectangle for a given card.
@@ -56,8 +58,14 @@ class renderer
 
   /// @brief Returns the hit rectangle for a pile.
   Rectangle pile_rect_hit(const pile& p) const noexcept;
+
  private:
-  /// @brief Checks if a card is hit by the mouse position.
+ 
+  Rectangle drag_rect(const drag_overlay& drag) const noexcept;
+  
+  hit_result hit_test_rect(const game_state& state, Rectangle rect) const noexcept;
+
+   /// @brief Checks if a card is hit by the mouse position.
   bool hit_test_card(const card* c, Vector2 mouse_pos) const noexcept;
 
   /// @brief Returns the stationary position of a card based on its pile data.

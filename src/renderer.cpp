@@ -47,7 +47,8 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   bool drop_valid = false;
   if (drag && drag->root)
   {
-    auto hit = hit_test(state, mouse_pos);
+    auto hit = hit_test_drag(state, *drag);
+
     if (hit.hit_pile)
       drop_pile = hit.hit_pile;
     else if (hit.hit_card)
@@ -103,13 +104,15 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
       draw_card(c);
     }
   }
+
+  // Piles
   DrawRectangleRoundedLines(pile_rect_hit(state.deck), 0.1f, 16, YELLOW);
 
   // Highlight drop
   if (drop_pile)
   {
-    auto pr = pile_rect_hit(*drop_pile);
-    DrawRectangleRoundedLines(pr, 0.1f, 16, drop_valid ? GREEN : RED);
+    auto pile_rect = pile_rect_hit(*drop_pile);
+    DrawRectangleRoundedLines(pile_rect, 0.1f, 16, drop_valid ? GREEN : RED);
   }
 
   // Dragged chain
@@ -265,6 +268,84 @@ hit_result renderer::hit_test(const game_state& state,
   return hit_result{.hit_card = nullptr, .hit_pile = nullptr};
 }
 
+hit_result renderer::hit_test_rect(const game_state& state,
+                                   Rectangle rect) const noexcept
+{
+  if (state.current_deck)
+  {
+    if (CheckCollisionRecs(rect, card_rect_hit(state.current_deck)))
+    {
+      return hit_result{.hit_card = state.current_deck, .hit_pile = nullptr};
+    }
+  }
+
+  {
+    Rectangle stock = pile_rect_hit(state.deck);
+    if (CheckCollisionRecs(rect, stock))
+    {
+      return hit_result{.hit_card = nullptr, .hit_pile = &state.deck};
+    }
+  }
+
+  for (auto& f : state.foundations)
+  {
+    Rectangle frect = pile_rect_hit(f);
+    if (CheckCollisionRecs(rect, frect))
+    {
+      if (!f.is_empty())
+      {
+        if (CheckCollisionRecs(rect, card_rect_hit(f.get_last())))
+          return hit_result{.hit_card = f.get_last(), .hit_pile = nullptr};
+
+        return hit_result{.hit_card = nullptr, .hit_pile = &f};
+      }
+      return hit_result{.hit_card = nullptr, .hit_pile = &f};
+    }
+  }
+
+  pile* empty_tableau_slot = nullptr;
+  card* target_card = nullptr;
+
+  for (uint8_t t_index = 0;
+       t_index < TABLEAU_COUNT && !empty_tableau_slot && !target_card;
+       ++t_index)
+  {
+    auto& t = state.tableaus[t_index];
+    Rectangle col = pile_rect_hit(t);
+
+    if (t.is_empty())
+    {
+      if (CheckCollisionRecs(rect, col))
+      {
+        empty_tableau_slot = &t;
+      }
+      continue;
+    }
+
+    for (card* c = t.get_first(); c; c = c->next)
+    {
+      if (CheckCollisionRecs(rect, card_rect_hit(c)))
+      {
+        target_card = c;
+        break;
+      }
+    }
+  }
+
+  if (target_card)
+    return hit_result{.hit_card = target_card, .hit_pile = nullptr};
+  if (empty_tableau_slot)
+    return hit_result{.hit_card = nullptr, .hit_pile = empty_tableau_slot};
+
+  return hit_result{.hit_card = nullptr, .hit_pile = nullptr};
+}
+
+hit_result renderer::hit_test_drag(const game_state& state,
+                                   const drag_overlay& drag) const noexcept
+{
+  return hit_test_rect(state, drag_rect(drag));
+}
+
 bool renderer::should_close() const noexcept { return WindowShouldClose(); }
 
 Vector2 renderer::stationary_card_pos(const card* c) const noexcept
@@ -370,6 +451,16 @@ Rectangle renderer::pile_rect_hit(const pile& p) const noexcept
   }
 
   return rec;
+}
+
+Rectangle renderer::drag_rect(const drag_overlay& drag) const noexcept
+{
+  return Rectangle{
+      .x = drag.mouse.x - drag.offset.x,
+      .y = drag.mouse.y - drag.offset.y,
+      .width = static_cast<float>(CARD_W),
+      .height = static_cast<float>(CARD_H),
+  };
 }
 
 bool renderer::hit_test_card(const card* c, Vector2 mouse_pos) const noexcept
