@@ -7,10 +7,10 @@
 renderer::renderer()
 {
   InitWindow(_screen_width, _screen_height, _window_title);
-  _cardsTex = LoadTexture("assets/solitaire_cards.png");
+  _cardsTex = LoadTexture("assets/cards_spritesheet_96_128.png");
   if (_cardsTex.id != 0)
   {
-    SetTextureFilter(_cardsTex, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(_cardsTex, TEXTURE_FILTER_POINT);
   }
 
   SetTargetFPS(_refresh_rate);
