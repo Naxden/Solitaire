@@ -30,3 +30,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 # C++20
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
+
+# Checks if OSX and links appropriate frameworks (only required on MacOS)
+if (APPLE)
+    target_link_libraries(${PROJECT_NAME} "-framework IOKit")
+    target_link_libraries(${PROJECT_NAME} "-framework Cocoa")
+    target_link_libraries(${PROJECT_NAME} "-framework OpenGL")
+endif()
