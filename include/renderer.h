@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "raylib.h"
+#include "game_state.h"
 
-struct game_state;
 struct hit_result;
 class pile;
 struct drag_overlay;
@@ -98,6 +98,10 @@ class renderer
 
   /// @brief Draws all registered UI buttons.
   void draw_buttons(Vector2 mouse_pos);
+
+  /// @brief
+  void draw_endgame_text(const game_status status) const noexcept;
+
   /// @brief Returns the rectangle for the next button in the UI layout.
   Rectangle next_button_rect() const noexcept;
 
@@ -118,7 +122,7 @@ class renderer
   const int _screen_width = 1280;
   const int _screen_height = 768;
   const char* _window_title = "Solitaire";
-  const char* _hud_message = "Moves: %u.\n 'Z' to undo, 'R' to new game, status: %d";
+  const char* _hud_message = "Moves: %u.\n 'Z' to undo, 'R' to new game";
   const int _refresh_rate = 144;
 
   Texture2D _cardsTex{};

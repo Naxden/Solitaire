@@ -2,7 +2,6 @@
 
 #include "console_card.h"
 #include "drag_controller.h"
-#include "game_state.h"
 #include "hit_result.h"
 
 renderer::renderer()
@@ -133,8 +132,11 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   }
 
   // HUD
-  DrawText(TextFormat(_hud_message, state.moves.size(), state.status), MARGIN,
+  DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN,
            GetScreenHeight() - 60, 20, YELLOW);
+
+  //
+  draw_endgame_text(state.status);
 
   // UI buttons
   draw_buttons(mouse_pos);
@@ -178,6 +180,19 @@ void renderer::draw_buttons(Vector2 mouse_pos)
     int tx = static_cast<int>(b.rect.x + (b.rect.width - tw) / 2);
     int ty = static_cast<int>(b.rect.y + (b.rect.height - fontSize) / 2 + 1);
     DrawText(b.label.c_str(), tx, ty, fontSize, BLACK);
+  }
+}
+
+void renderer::draw_endgame_text(const game_status status) const noexcept
+{
+  constexpr int font_size = 75;
+  if (status == game_status::won)
+  {
+    DrawText("Game Won!", GetRenderWidth() / 3, GetRenderHeight() / 2, font_size, BLACK);
+  }
+  else if (status == game_status::lost)
+  {
+    DrawText("Game Lost", GetRenderWidth() / 3, GetRenderHeight() / 2, font_size, BLACK);
   }
 }
 
