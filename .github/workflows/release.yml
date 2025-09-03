@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -33,6 +34,7 @@ jobs:
           cp build/Solitaire dist/Solitaire/Solitaire
           chmod +x dist/Solitaire/Solitaire
           cp -r assets dist/Solitaire/assets
+          cp LICENSE README.md dist/Solitaire/
           tar -C dist -czf Solitaire-linux-x86_64.tar.gz Solitaire
 
       - uses: actions/upload-artifact@v4
@@ -57,6 +59,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist/Solitaire | Out-Null
           Copy-Item build/Release/Solitaire.exe dist/Solitaire/Solitaire.exe
           Copy-Item assets dist/Solitaire/assets -Recurse
+          Copy-Item LICENSE dist/Solitaire/LICENSE
+          Copy-Item README.md dist/Solitaire/README.md
           Compress-Archive -Path dist/Solitaire/* -DestinationPath Solitaire-windows-x64.zip
 
       - uses: actions/upload-artifact@v4
@@ -81,6 +85,7 @@ jobs:
           cp build/Solitaire dist/Solitaire/Solitaire
           chmod +x dist/Solitaire/Solitaire
           cp -r assets dist/Solitaire/assets
+          cp LICENSE README.md dist/Solitaire/
           tar -C dist -czf Solitaire-macos-universal.tar.gz Solitaire
 
       - uses: actions/upload-artifact@v4
