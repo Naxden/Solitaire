@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps (raylib system reqs)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake \
+            libx11-dev libxi-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+            libgl1-mesa-dev libasound2-dev libpulse-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/Solitaire
+          cp build/Solitaire dist/Solitaire/Solitaire
+          chmod +x dist/Solitaire/Solitaire
+          cp -r assets dist/Solitaire/assets
+          tar -C dist -czf Solitaire-linux-x86_64.tar.gz Solitaire
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Solitaire-linux-x86_64
+          path: Solitaire-linux-x86_64.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (MSVC)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/Solitaire | Out-Null
+          Copy-Item build/Release/Solitaire.exe dist/Solitaire/Solitaire.exe
+          Copy-Item assets dist/Solitaire/assets -Recurse
+          Compress-Archive -Path dist/Solitaire/* -DestinationPath Solitaire-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Solitaire-windows-x64
+          path: Solitaire-windows-x64.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: brew install cmake
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/Solitaire
+          cp build/Solitaire dist/Solitaire/Solitaire
+          chmod +x dist/Solitaire/Solitaire
+          cp -r assets dist/Solitaire/assets
+          tar -C dist -czf Solitaire-macos-universal.tar.gz Solitaire
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Solitaire-macos
+          path: Solitaire-macos-universal.tar.gz
+
+  publish:
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          shopt -s globstar
+          mv artifacts/**/Solitaire-*.tar.gz . 2>/dev/null || true
+          mv artifacts/**/Solitaire-*.zip . 2>/dev/null || true
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Solitaire-*.zip
+            Solitaire-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
