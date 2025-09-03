@@ -125,7 +125,7 @@ class renderer
   const char* _hud_message = "Moves: %u.\n 'Z' to undo, 'R' to new game";
   const int _refresh_rate = 144;
 
-  Texture2D _cardsTex{};
+  Texture2D _cards_tex{};
 
   // UI
   std::vector<ui_button> _buttons;

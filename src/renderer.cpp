@@ -7,10 +7,18 @@
 renderer::renderer()
 {
   InitWindow(_screen_width, _screen_height, _window_title);
-  _cardsTex = LoadTexture("assets/cards_spritesheet_96_128.png");
-  if (_cardsTex.id != 0)
+
+  Image icon = LoadImage("assets/icon.png");
+  if (icon.data)
   {
-    SetTextureFilter(_cardsTex, TEXTURE_FILTER_POINT);
+    SetWindowIcon(icon);
+    UnloadImage(icon);
+  }
+
+  _cards_tex = LoadTexture("assets/cards_spritesheet_96_128.png");
+  if (_cards_tex.id != 0)
+  {
+    SetTextureFilter(_cards_tex, TEXTURE_FILTER_POINT);
   }
 
   SetTargetFPS(_refresh_rate);
@@ -18,9 +26,9 @@ renderer::renderer()
 
 renderer::~renderer()
 {
-  if (_cardsTex.id != 0)
+  if (_cards_tex.id != 0)
   {
-    UnloadTexture(_cardsTex);
+    UnloadTexture(_cards_tex);
   }
   CloseWindow();
 }
@@ -188,11 +196,13 @@ void renderer::draw_endgame_text(const game_status status) const noexcept
   constexpr int font_size = 75;
   if (status == game_status::won)
   {
-    DrawText("Game Won!", GetRenderWidth() / 3, GetRenderHeight() / 2, font_size, BLACK);
+    DrawText("Game Won!", GetRenderWidth() / 3, GetRenderHeight() / 2,
+             font_size, BLACK);
   }
   else if (status == game_status::lost)
   {
-    DrawText("Game Lost", GetRenderWidth() / 3, GetRenderHeight() / 2, font_size, BLACK);
+    DrawText("Game Lost", GetRenderWidth() / 3, GetRenderHeight() / 2,
+             font_size, BLACK);
   }
 }
 
@@ -505,7 +515,7 @@ void renderer::draw_card(const card* c, Rectangle cr) noexcept
 {
   if (c)
   {
-    if (_cardsTex.id == 0)
+    if (_cards_tex.id == 0)
     {
       Color back = c->face_up ? RAYWHITE : DARKBLUE;
       DrawRectangleRounded(cr, 0.08f, 6, back);
@@ -520,7 +530,7 @@ void renderer::draw_card(const card* c, Rectangle cr) noexcept
     }
     else
     {
-      DrawTexturePro(_cardsTex, src_card_rect(c), cr, Vector2{0, 0}, 0.0f,
+      DrawTexturePro(_cards_tex, src_card_rect(c), cr, Vector2{0, 0}, 0.0f,
                      WHITE);
     }
   }
