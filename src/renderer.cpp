@@ -143,7 +143,6 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN,
            GetScreenHeight() - 60, 20, YELLOW);
 
-  //
   draw_endgame_text(state.status);
 
   // UI buttons
@@ -196,12 +195,12 @@ void renderer::draw_endgame_text(const game_status status) const noexcept
   constexpr int font_size = 75;
   if (status == game_status::won)
   {
-    DrawText("Game Won!", GetRenderWidth() / 3, GetRenderHeight() / 2,
+    DrawText("Game Won!", GetScreenWidth() / 3, GetScreenHeight() / 2,
              font_size, BLACK);
   }
   else if (status == game_status::lost)
   {
-    DrawText("Game Lost", GetRenderWidth() / 3, GetRenderHeight() / 2,
+    DrawText("Game Lost", GetScreenWidth() / 3, GetScreenHeight() / 2,
              font_size, BLACK);
   }
 }
