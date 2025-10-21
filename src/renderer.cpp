@@ -6,6 +6,7 @@
 
 renderer::renderer()
 {
+  SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
   InitWindow(_screen_width, _screen_height, _window_title);
 
   Image icon = LoadImage("assets/icon.png");
@@ -18,7 +19,7 @@ renderer::renderer()
   _cards_tex = LoadTexture("assets/cards_spritesheet_96_128.png");
   if (_cards_tex.id != 0)
   {
-    SetTextureFilter(_cards_tex, TEXTURE_FILTER_POINT);
+    SetTextureFilter(_cards_tex, TEXTURE_FILTER_BILINEAR);
   }
 
   {
@@ -30,8 +31,9 @@ renderer::renderer()
         0x2764,  // ❤ (will often combine with FE0F)
         0xFE0F,  // VS16 for emoji presentation
     };
-    _emoji_font = LoadFontEx("assets/NotoEmoji-Regular.ttf", 32, codepoints,
-                             sizeof(codepoints) / sizeof(codepoints[0]));
+    _emoji_font =
+        LoadFontEx("assets/Noto_Emoji/NotoEmoji-Regular.ttf", 32, codepoints,
+                   sizeof(codepoints) / sizeof(codepoints[0]));
 
     if (_emoji_font.texture.id != 0)
     {
@@ -60,8 +62,8 @@ renderer::~renderer()
 size_t renderer::register_button(std::string label,
                                  std::function<void()> on_click)
 {
-  _buttons.push_back(ui_button{next_button_rect(), std::move(label),
-                               std::move(on_click), false});
+  _buttons.push_back(ui_button{get_button_rect(_buttons.size()),
+                               std::move(label), std::move(on_click), false});
   return _buttons.size() - 1;
 }
 
@@ -70,6 +72,9 @@ void renderer::clear_buttons() { _buttons.clear(); }
 void renderer::update(const game_state& state, Vector2 mouse_pos,
                       const std::optional<drag_overlay> drag)
 {
+  update_scale();
+  float margin = get_scaled_margin();
+
   BeginDrawing();
   ClearBackground(Color{22, 120, 80, 255});
 
@@ -149,22 +154,25 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   // Dragged chain
   if (drag && drag->root)
   {
+    auto card_size = get_scaled_card_size();
+    auto tableau_spacing = get_scaled_tableau_spacing();
+
     Rectangle cr{
         .x = drag->mouse.x - drag->offset.x,
         .y = drag->mouse.y - drag->offset.y,
-        .width = static_cast<float>(CARD_W),
-        .height = static_cast<float>(CARD_H),
+        .width = card_size.x,
+        .height = card_size.y,
     };
     for (auto c = drag->root; c; c = c->next)
     {
       draw_card(c, cr);
       if (c->owner->type == pile_type::deck) break;
-      cr.y += TAB_SPACING_Y;
+      cr.y += tableau_spacing.y;
     }
   }
 
   // HUD
-  DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN,
+  DrawText(TextFormat(_hud_message, state.moves.size()), margin,
            GetScreenHeight() - 60, 20, YELLOW);
 
   // Hint
@@ -183,8 +191,11 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
 
 void renderer::draw_buttons(Vector2 mouse_pos)
 {
-  for (auto& b : _buttons)
+  for (size_t i = 0; i < _buttons.size(); i++)
   {
+    auto& b = _buttons[i];
+
+    b.rect = get_button_rect(i);
     bool hover = CheckCollisionPointRec(mouse_pos, b.rect);
     bool pressed_now = IsMouseButtonDown(MOUSE_BUTTON_LEFT) && hover;
 
@@ -212,7 +223,7 @@ void renderer::draw_buttons(Vector2 mouse_pos)
     DrawRectangleRounded(b.rect, 0.2f, 8, fill);
     DrawRectangleRoundedLines(b.rect, 0.2f, 8, DARKGRAY);
 
-    int fontSize = 20;
+    const int fontSize = 20;
     int tw = MeasureText(b.label.c_str(), fontSize);
     int tx = static_cast<int>(b.rect.x + (b.rect.width - tw) / 2);
     int ty = static_cast<int>(b.rect.y + (b.rect.height - fontSize) / 2 + 1);
@@ -222,30 +233,29 @@ void renderer::draw_buttons(Vector2 mouse_pos)
 
 void renderer::draw_endgame_text(const game_status status) const noexcept
 {
-  constexpr int font_size = 75;
-  if (status == game_status::won)
+  if (status == game_status::won || status == game_status::lost)
   {
-    DrawText("Game Won!", GetScreenWidth() / 3, GetScreenHeight() / 2,
-             font_size, BLACK);
-  }
-  else if (status == game_status::lost)
-  {
-    DrawText("Game Lost", GetScreenWidth() / 3, GetScreenHeight() / 2,
-             font_size, BLACK);
+    constexpr int font_size = 75;
+    const char* message =
+        status == game_status::won ? "Game Won!" : "Game Lost";
+    const auto message_width = MeasureText(message, font_size);
+
+    DrawText(message, GetScreenWidth() / 2 - message_width / 2,
+             GetScreenHeight() / 2, font_size, BLACK);
   }
 }
 
-Rectangle renderer::next_button_rect() const noexcept
+Rectangle renderer::get_button_rect(size_t button_index) const noexcept
 {
+  const auto button_size = get_scaled_button_size();
+  const auto button_margin = get_scaled_button_margin();
   return Rectangle{
-      .x = static_cast<float>(GetScreenWidth() -
-                              (BUTTON_COL_C - _buttons.size() % BUTTON_COL_C) *
-                                  BUTTON_W),
-      .y = static_cast<float>(GetScreenHeight() -
-                              _buttons.size() / BUTTON_COL_C * BUTTON_H -
-                              BUTTON_H - BUTTON_MARGIN),
-      .width = static_cast<float>(BUTTON_W),
-      .height = static_cast<float>(BUTTON_H),
+      .x = GetScreenWidth() -
+           (BUTTON_COL_COUNT - button_index % BUTTON_COL_COUNT) * button_size.x,
+      .y = GetScreenHeight() - button_index / BUTTON_COL_COUNT * button_size.y -
+           button_size.y - button_margin,
+      .width = button_size.x,
+      .height = button_size.y,
   };
 }
 
@@ -448,6 +458,12 @@ Vector2 renderer::stationary_card_pos(const card* c) const noexcept
   {
     auto pile_index = c->owner->index;
     auto in_pile_index = c->owner->get_position_in_pile(c);
+    auto card_size = get_scaled_card_size();
+    auto margin_scaled = get_scaled_margin();
+    auto foundation_size = get_scaled_foundation_spacing();
+    auto tablueau_size = get_scaled_tableau_spacing();
+    auto tablueau_offest = get_scaled_tableau_offset();
+    auto deck_size = get_scaled_deck_spacing();
 
     switch (c->owner->type)
     {
@@ -455,25 +471,24 @@ Vector2 renderer::stationary_card_pos(const card* c) const noexcept
         return Vector2{
             .x = static_cast<float>(GetScreenWidth() -
                                     (FOUNDATION_COUNT - pile_index) *
-                                        (CARD_W + FND_SPACING_X) -
-                                    MARGIN),
-            .y = static_cast<float>(MARGIN),
+                                        (card_size.x + foundation_size.x) -
+                                    margin_scaled),
+            .y = margin_scaled,
         };
 
       case pile_type::tableau:
         return Vector2{
-            .x = static_cast<float>(MARGIN +
-                                    pile_index * (CARD_W + TAB_SPACING_X)),
-            .y = static_cast<float>(MARGIN + 300 +
-                                    in_pile_index * TAB_SPACING_Y),
+            .x = margin_scaled + pile_index * (card_size.x + tablueau_size.x),
+            .y = margin_scaled + tablueau_offest +
+                 in_pile_index * tablueau_size.y,
         };
 
       case pile_type::deck:
         return Vector2{
-            .x = static_cast<float>(c->face_up ? MARGIN + CARD_W + DEC_SPACING_X
-                                               : MARGIN),
-            .y = static_cast<float>(
-                c->face_up ? MARGIN : MARGIN + in_pile_index * DEC_SPACING_Y),
+            .x = c->face_up ? margin_scaled + card_size.x + deck_size.x
+                            : margin_scaled,
+            .y = c->face_up ? margin_scaled
+                            : margin_scaled + in_pile_index * deck_size.y,
         };
       default:
         break;
@@ -488,12 +503,13 @@ Rectangle renderer::card_rect_draw(const card* c) const noexcept
   if (c)
   {
     auto cpos = stationary_card_pos(c);
+    auto card_size = get_scaled_card_size();
 
     return Rectangle{
         .x = cpos.x,
         .y = cpos.y,
-        .width = static_cast<float>(CARD_W),
-        .height = static_cast<float>(CARD_H),
+        .width = card_size.x,
+        .height = card_size.y,
     };
   }
 
@@ -505,10 +521,11 @@ Rectangle renderer::card_rect_hit(const card* c) const noexcept
   if (c)
   {
     auto base_card_rect = card_rect_draw(c);
+    auto tableau_spacing = get_scaled_tableau_spacing();
 
     if (c->next && c->owner && c->owner->type == pile_type::tableau)
     {
-      base_card_rect.height = TAB_SPACING_Y;
+      base_card_rect.height = tableau_spacing.y;
     }
 
     return base_card_rect;
@@ -520,31 +537,38 @@ Rectangle renderer::card_rect_hit(const card* c) const noexcept
 Rectangle renderer::pile_rect_hit(const pile& p) const noexcept
 {
   auto last_card = p.get_last();
+  auto card_size = get_scaled_card_size();
+  auto scaled_margin = get_scaled_margin();
+  auto tableau_spacing = get_scaled_tableau_spacing();
+  auto tableau_offset = get_scaled_tableau_offset();
+  auto foundation_spacing = get_scaled_tableau_spacing();
+  auto deck_spacing = get_scaled_deck_spacing();
+
   if (last_card && p.type != pile_type::deck)
   {
     return card_rect_hit(p.get_last());
   }
   Rectangle rec{
-      .width = static_cast<float>(CARD_W),
-      .height = static_cast<float>(CARD_H),
+      .width = card_size.x,
+      .height = card_size.y,
   };
 
   switch (p.type)
   {
     case pile_type::tableau:
-      rec.x = static_cast<float>(MARGIN + p.index * (CARD_W + TAB_SPACING_X));
-      rec.y = static_cast<float>(MARGIN + 300);
+      rec.x = scaled_margin + p.index * (card_size.x + tableau_spacing.x);
+      rec.y = scaled_margin + tableau_offset;
       break;
     case pile_type::foundation:
-      rec.x = static_cast<float>(
+      rec.x =
           GetScreenWidth() -
-          (FOUNDATION_COUNT - p.index) * (CARD_W + FND_SPACING_X) - MARGIN);
-      rec.y = static_cast<float>(MARGIN);
+          (FOUNDATION_COUNT - p.index) * (card_size.x + foundation_spacing.x) -
+          scaled_margin;
+      rec.y = scaled_margin;
       break;
     case pile_type::deck:
-      rec.x = static_cast<float>(MARGIN);
-      rec.y = static_cast<float>(
-          std::max(0, p.get_height() - 1) * DEC_SPACING_Y + MARGIN);
+      rec.x = scaled_margin;
+      rec.y = std::max(0, p.get_height() - 1) * deck_spacing.y + scaled_margin;
       break;
     default:
       break;
@@ -555,11 +579,12 @@ Rectangle renderer::pile_rect_hit(const pile& p) const noexcept
 
 Rectangle renderer::drag_rect(const drag_overlay& drag) const noexcept
 {
+  auto card_size = get_scaled_card_size();
   return Rectangle{
       .x = drag.mouse.x - drag.offset.x,
       .y = drag.mouse.y - drag.offset.y,
-      .width = static_cast<float>(CARD_W),
-      .height = static_cast<float>(CARD_H),
+      .width = card_size.x,
+      .height = card_size.y,
   };
 }
 

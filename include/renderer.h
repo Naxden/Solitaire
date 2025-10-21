@@ -102,24 +102,22 @@ class renderer
   /// @brief
   void draw_endgame_text(const game_status status) const noexcept;
 
-  /// @brief Returns the rectangle for the next button in the UI layout.
-  Rectangle next_button_rect() const noexcept;
+  /// @brief Returns the rectangle for the button in the UI layout.
+  Rectangle get_button_rect(size_t button_index) const noexcept;
 
   /// @brief Draws a visual hint for a suggested move.
   /// @param valid_hint Structure containing the next suggested move
   void draw_hint(const hint valid_hint) noexcept;
 
- private:
-  static constexpr int MARGIN = 20;
-  static constexpr int CARD_W = 96;
-  static constexpr int CARD_H = 128;
-  static constexpr int TAB_SPACING_X = 30;
-  static constexpr int TAB_SPACING_Y = 24;
-  static constexpr int FND_SPACING_X = 30;
-  static constexpr int DEC_SPACING_X = 30;
-  static constexpr int DEC_SPACING_Y = 3;
-  static constexpr int TAB_OFFSET_Y = 150;
+  void update_scale() noexcept
+  {
+    _scale = static_cast<float>(GetScreenWidth()) / _screen_width *
+             static_cast<float>(GetScreenHeight()) / _screen_height;
 
+    _scale = std::clamp(_scale, 0.7f, 1.25f);
+  }
+
+ private:
   static constexpr int TILE_W = 96;
   static constexpr int TILE_H = 128;
 
@@ -132,10 +130,61 @@ class renderer
   Texture2D _cards_tex{};
   Font _emoji_font{};
 
-  // UI
   std::vector<ui_button> _buttons;
+  static constexpr int BUTTON_COL_COUNT = 3;
+
+  float _scale = 1.f;
+#pragma region UI sizes
+
+  static constexpr int MARGIN = 20;
+  const float get_scaled_margin() const noexcept { return MARGIN * _scale; }
+
+  static constexpr int CARD_W = 96;
+  static constexpr int CARD_H = 128;
+  const Vector2 get_scaled_card_size() const noexcept
+  {
+    return Vector2{.x = CARD_W * _scale, .y = CARD_H * _scale};
+  }
+
+  static constexpr int TAB_SPACING_X = 30;
+  static constexpr int TAB_SPACING_Y = 24;
+  const Vector2 get_scaled_tableau_spacing() const noexcept
+  {
+    return Vector2{.x = TAB_SPACING_X * _scale, .y = TAB_SPACING_Y * _scale};
+  };
+
+  static constexpr int TAB_OFFSET_Y = 300;
+  const float get_scaled_tableau_offset() const noexcept
+  {
+    return TAB_OFFSET_Y * _scale;
+  }
+
+  static constexpr int FND_SPACING_X = 30;
+  static constexpr int FND_SPACING_Y = 0;
+  const Vector2 get_scaled_foundation_spacing() const noexcept
+  {
+    return Vector2{.x = FND_SPACING_X * _scale, .y = FND_SPACING_Y * _scale};
+  };
+
+  static constexpr int DEC_SPACING_X = 30;
+  static constexpr int DEC_SPACING_Y = 3;
+  const Vector2 get_scaled_deck_spacing() const noexcept
+  {
+    return Vector2{.x = DEC_SPACING_X * _scale, .y = DEC_SPACING_Y * _scale};
+  };
+
   static constexpr int BUTTON_W = 150;
   static constexpr int BUTTON_H = 36;
-  static constexpr int BUTTON_COL_C = 3;
+  const Vector2 get_scaled_button_size() const noexcept
+  {
+    return Vector2{.x = BUTTON_W * _scale, .y = BUTTON_H * _scale};
+  }
+
   static constexpr int BUTTON_MARGIN = 10;
+  const float get_scaled_button_margin() const noexcept
+  {
+    return BUTTON_MARGIN * _scale;
+  }
+
+#pragma endregion
 };
