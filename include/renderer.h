@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "raylib.h"
 #include "game_state.h"
+#include "raylib.h"
 
 struct hit_result;
 class pile;
@@ -39,7 +39,7 @@ class renderer
                       Vector2 mouse_pos) const noexcept;
 
   hit_result hit_test_drag(const game_state& state,
-                      const drag_overlay& drag) const noexcept;
+                           const drag_overlay& drag) const noexcept;
   bool should_close() const noexcept;
 
   /// @brief Returns the drawing rectangle for a given card.
@@ -60,12 +60,12 @@ class renderer
   Rectangle pile_rect_hit(const pile& p) const noexcept;
 
  private:
- 
   Rectangle drag_rect(const drag_overlay& drag) const noexcept;
-  
-  hit_result hit_test_rect(const game_state& state, Rectangle rect) const noexcept;
 
-   /// @brief Checks if a card is hit by the mouse position.
+  hit_result hit_test_rect(const game_state& state,
+                           Rectangle rect) const noexcept;
+
+  /// @brief Checks if a card is hit by the mouse position.
   bool hit_test_card(const card* c, Vector2 mouse_pos) const noexcept;
 
   /// @brief Returns the stationary position of a card based on its pile data.
@@ -105,6 +105,10 @@ class renderer
   /// @brief Returns the rectangle for the next button in the UI layout.
   Rectangle next_button_rect() const noexcept;
 
+  /// @brief Draws a visual hint for a suggested move.
+  /// @param valid_hint Structure containing the next suggested move
+  void draw_hint(const hint valid_hint) noexcept;
+
  private:
   static constexpr int MARGIN = 20;
   static constexpr int CARD_W = 96;
@@ -126,6 +130,7 @@ class renderer
   const int _refresh_rate = 144;
 
   Texture2D _cards_tex{};
+  Font _emoji_font{};
 
   // UI
   std::vector<ui_button> _buttons;

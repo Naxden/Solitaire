@@ -21,6 +21,24 @@ renderer::renderer()
     SetTextureFilter(_cards_tex, TEXTURE_FILTER_POINT);
   }
 
+  {
+    int codepoints[] = {
+        0x2660,  // ♠
+        0x2663,  // ♣
+        0x2665,  // ♥
+        0x2666,  // ♦
+        0x2764,  // ❤ (will often combine with FE0F)
+        0xFE0F,  // VS16 for emoji presentation
+    };
+    _emoji_font = LoadFontEx("assets/NotoEmoji-Regular.ttf", 32, codepoints,
+                             sizeof(codepoints) / sizeof(codepoints[0]));
+
+    if (_emoji_font.texture.id != 0)
+    {
+      SetTextureFilter(_emoji_font.texture, TEXTURE_FILTER_POINT);
+    }
+  }
+
   SetTargetFPS(_refresh_rate);
 }
 
@@ -30,6 +48,12 @@ renderer::~renderer()
   {
     UnloadTexture(_cards_tex);
   }
+
+  if (_emoji_font.texture.id != 0)
+  {
+    UnloadFont(_emoji_font);
+  }
+
   CloseWindow();
 }
 
@@ -143,6 +167,12 @@ void renderer::update(const game_state& state, Vector2 mouse_pos,
   DrawText(TextFormat(_hud_message, state.moves.size()), MARGIN,
            GetScreenHeight() - 60, 20, YELLOW);
 
+  // Hint
+  if (state.next_move_hint)
+  {
+    draw_hint(state.next_move_hint.value());
+  }
+
   draw_endgame_text(state.status);
 
   // UI buttons
@@ -217,6 +247,46 @@ Rectangle renderer::next_button_rect() const noexcept
       .width = static_cast<float>(BUTTON_W),
       .height = static_cast<float>(BUTTON_H),
   };
+}
+
+void renderer::draw_hint(const hint valid_hint) noexcept
+{
+  if (valid_hint.movable_card && valid_hint.movable_card->owner &&
+      valid_hint.target_pile)
+  {
+    DrawRectangleRoundedLines(pile_rect_hit(*valid_hint.movable_card->owner),
+                              0.1f, 16, BLUE);
+    DrawRectangleRoundedLines(pile_rect_hit(*valid_hint.target_pile), 0.1f, 16,
+                              BLUE);
+
+    card_suit movable_suite = valid_hint.movable_card->get_suit();
+    Color movable_color =
+        is_same_color(movable_suite, card_suit::Diamonds) ? RED : BLACK;
+    auto movable_message = TextFormat(
+        "Move %s", to_string_char(valid_hint.movable_card->get_value()));
+    DrawText(movable_message,
+             GetScreenWidth() * 0.95f - MeasureText(movable_message, 26),
+             GetScreenHeight() * 0.4f, 24, movable_color);
+    DrawTextEx(_emoji_font, to_string_emoji(movable_suite),
+               {GetScreenWidth() * 0.95f, GetScreenHeight() * 0.4f}, 24, 2,
+               movable_color);
+
+    card* target_card = valid_hint.target_pile->get_last();
+    if (target_card)
+    {
+      card_suit target_suite = target_card->get_suit();
+      Color target_color =
+          is_same_color(target_suite, card_suit::Diamonds) ? RED : BLACK;
+      auto target_message =
+          TextFormat("To %s", to_string_char(target_card->get_value()));
+      DrawText(target_message,
+               GetScreenWidth() * 0.95f - MeasureText(target_message, 26),
+               GetScreenHeight() * 0.44f, 24, target_color);
+      DrawTextEx(_emoji_font, to_string_emoji(target_suite),
+                 {GetScreenWidth() * 0.95f, GetScreenHeight() * 0.44f}, 24, 2,
+                 target_color);
+    }
+  }
 }
 
 hit_result renderer::hit_test(const game_state& state,

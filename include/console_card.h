@@ -97,23 +97,23 @@ inline const char* to_string_char(card_value value)
     case card_value::Ace:
       return "A";
     case card_value::Two:
-      return "T";
+      return "2";
     case card_value::Three:
-      return "T";
+      return "3";
     case card_value::Four:
-      return "F";
+      return "4";
     case card_value::Five:
-      return "F";
+      return "5";
     case card_value::Six:
-      return "S";
+      return "6";
     case card_value::Seven:
-      return "S";
+      return "7";
     case card_value::Eight:
-      return "E";
+      return "8";
     case card_value::Nine:
-      return "N";
+      return "9";
     case card_value::Ten:
-      return "T";
+      return "10";
     case card_value::Jack:
       return "J";
     case card_value::Queen:
