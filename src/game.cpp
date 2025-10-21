@@ -205,7 +205,7 @@ game_state game::export_game_state() noexcept
       .deck = _deck,
       .current_deck = _current_deck,
       .moves = _moves,
-      .hint = _show_hint ? _valid_next_move : std::nullopt,
+      .next_move_hint = _show_hint ? _valid_next_move : std::nullopt,
   };
 }
 

@@ -9,5 +9,5 @@ struct game_state
   pile& deck;
   card* current_deck;
   const std::stack<move>& moves;
-  std::optional<hint> hint;
+  std::optional<hint> next_move_hint;
 };
