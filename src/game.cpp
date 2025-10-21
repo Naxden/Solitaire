@@ -75,6 +75,9 @@ void game::new_game() noexcept
   _picked_deck = nullptr;
 
   _status = game_status::in_progress;
+
+  _show_hint = false;
+  update_hint();
 }
 
 void game::next_deck() noexcept
@@ -132,6 +135,12 @@ void game::move_card(card* moved, pile& target) noexcept
       target.assign_as_child(moved);
 
       _moves.push(newMove);
+
+      _show_hint = false;
+      if (_valid_next_move && _valid_next_move->movable_card == moved)
+      {
+        _valid_next_move = std::nullopt;
+      }
       update_status();
     }
   }
@@ -181,18 +190,23 @@ void game::undo_move() noexcept
       _picked_deck = nullptr;
     }
 
+    _show_hint = false;
+    _valid_next_move = std::nullopt;
     update_status();
   }
 }
 
 game_state game::export_game_state() noexcept
 {
-  return game_state{.status = _status,
-                    .tableaus = _tableaus,
-                    .foundations = _foundations,
-                    .deck = _deck,
-                    .current_deck = _current_deck,
-                    .moves = _moves};
+  return game_state{
+      .status = _status,
+      .tableaus = _tableaus,
+      .foundations = _foundations,
+      .deck = _deck,
+      .current_deck = _current_deck,
+      .moves = _moves,
+      .hint = _show_hint ? _valid_next_move : std::nullopt,
+  };
 }
 
 std::optional<move> game::next_auto_move() noexcept
@@ -208,8 +222,8 @@ std::optional<move> game::next_auto_move() noexcept
         if (f.is_valid_placement(t_card))
         {
           return std::optional<move>(move{
-            .moved_card = t_card,
-            .to_pile = &f,
+              .moved_card = t_card,
+              .to_pile = &f,
           });
         }
       }
@@ -252,37 +266,22 @@ bool game::has_auto_completion_finished() const noexcept
 
 bool game::has_available_moves() const noexcept
 {
-  // tableau to foundation
-  for (const auto& t : _tableaus)
-  {
-    const auto t_last = t.get_last();
-    if (t_last)
-    {
-      for (auto& f : _foundations)
-      {
-        if (f.is_valid_placement(t_last))
-        {
-          return true;
-        }
-      }
-    }
-  }
+  return _valid_next_move.has_value();
+}
 
-  // deck to foundation or tableau
-  for (auto d_card = _deck.first; d_card; d_card = d_card->next)
+void game::update_hint() noexcept
+{
+  // check cached valid move
+  if (_valid_next_move.has_value())
   {
-    for (const auto& t : _tableaus)
+    auto [cached_card, cached_pile] = _valid_next_move.value();
+
+    if (cached_card && cached_pile && cached_card->owner &&
+        cached_card->owner->type != pile_type::foundation)
     {
-      if (t.is_valid_placement(d_card))
+      if (cached_pile->is_valid_placement(cached_card))
       {
-        return true;
-      }
-    }
-    for (const auto& f : _foundations)
-    {
-      if (f.is_valid_placement(d_card))
-      {
-        return true;
+        return;
       }
     }
   }
@@ -305,17 +304,56 @@ bool game::has_available_moves() const noexcept
         if (&t_from == &t_to)
         {
           continue;
-          ;
         }
         if (t_to.is_valid_placement(from_card))
         {
-          return true;
+          _valid_next_move =
+              hint{.movable_card = from_card, .target_pile = &t_to};
+          return;
         }
       }
     }
   }
 
-  return false;
+  // tableau to foundation
+  for (const auto& t : _tableaus)
+  {
+    const auto t_last = t.get_last();
+    if (t_last)
+    {
+      for (auto& f : _foundations)
+      {
+        if (f.is_valid_placement(t_last))
+        {
+          _valid_next_move = hint{.movable_card = t_last, .target_pile = &f};
+          return;
+        }
+      }
+    }
+  }
+
+  // deck to foundation or tableau
+  for (auto d_card = _deck.first; d_card; d_card = d_card->next)
+  {
+    for (const auto& t : _tableaus)
+    {
+      if (t.is_valid_placement(d_card))
+      {
+        _valid_next_move = hint{.movable_card = d_card, .target_pile = &t};
+        return;
+      }
+    }
+    for (const auto& f : _foundations)
+    {
+      if (f.is_valid_placement(d_card))
+      {
+        _valid_next_move = hint{.movable_card = d_card, .target_pile = &f};
+        return;
+      }
+    }
+  }
+
+  _valid_next_move = std::nullopt;
 }
 
 bool game::check_win() const noexcept
@@ -349,13 +387,17 @@ void game::update_status() noexcept
     {
       _status = game_status::auto_solve;
     }
-    else if (!has_available_moves())
-    {
-      _status = game_status::lost;
-    }
     else
     {
-      _status = game_status::in_progress;
+      update_hint();
+      if (!has_available_moves())
+      {
+        _status = game_status::lost;
+      }
+      else
+      {
+        _status = game_status::in_progress;
+      }
     }
   }
 }

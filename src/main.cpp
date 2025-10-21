@@ -21,13 +21,13 @@ int main()
                            });
 
   renderer.register_button("Undo move", [&]() { game.undo_move(); });
+  renderer.register_button("Show hint", [&]() { game.show_hint(); });
 
   while (!renderer.should_close())
   {
     game_state state = game.export_game_state();
     Vector2 mouse = GetMousePosition();
     auto drag_overlay = drag.overlay();
-
 
     if (state.status == game_status::auto_solve)
     {
@@ -59,9 +59,7 @@ int main()
         }
         else
         {
-          drag.end(
-              game,
-              hit_result { .hit_pile = auto_move.move_data->to_pile });
+          drag.end(game, hit_result{.hit_pile = auto_move.move_data->to_pile});
           auto_move.move_data = std::nullopt;
         }
       }
@@ -93,7 +91,7 @@ int main()
         {
           hit = renderer.hit_test_drag(state, *drag_overlay);
         }
-        
+
         drag.end(game, hit);
       }
 

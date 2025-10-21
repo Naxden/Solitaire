@@ -4,6 +4,7 @@
 #include <stack>
 
 #include "card.h"
+#include "hint.h"
 #include "move.h"
 
 constexpr uint8_t COLOR_COUNT = 4;
@@ -51,6 +52,9 @@ class game
   /// available
   std::optional<move> next_auto_move() noexcept;
 
+  /// @brief Trigger game to show next vali move in next game_export state
+  void show_hint() noexcept { _show_hint = true; }
+
  private:
   /// @brief Shuffles the deck of cards.
   void shuffle_deck() noexcept;
@@ -62,6 +66,8 @@ class game
   /// @brief Checks whether the player has any move that will bring him closer
   /// to victory
   bool has_available_moves() const noexcept;
+
+  void update_hint() noexcept;
 
   bool check_win() const noexcept;
 
@@ -109,4 +115,7 @@ class game
   game_status _status;
 
   std::stack<move> _moves;
+
+  bool _show_hint = false;
+  std::optional<hint> _valid_next_move;
 };
