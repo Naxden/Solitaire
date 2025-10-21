@@ -254,10 +254,10 @@ void renderer::draw_hint(const hint valid_hint) noexcept
   if (valid_hint.movable_card && valid_hint.movable_card->owner &&
       valid_hint.target_pile)
   {
-    DrawRectangleRoundedLines(pile_rect_hit(*valid_hint.movable_card->owner),
-                              0.1f, 16, BLUE);
-    DrawRectangleRoundedLines(pile_rect_hit(*valid_hint.target_pile), 0.1f, 16,
-                              BLUE);
+    DrawRectangleRoundedLinesEx(pile_rect_hit(*valid_hint.movable_card->owner),
+                                0.1f, 16, 2.f, BLUE);
+    DrawRectangleRoundedLinesEx(pile_rect_hit(*valid_hint.target_pile), 0.01f,
+                                16, 2.f, BLUE);
 
     card_suit movable_suite = valid_hint.movable_card->get_suit();
     Color movable_color =
