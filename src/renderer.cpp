@@ -1,5 +1,7 @@
 #include "renderer.h"
 
+#include <filesystem>
+
 #include "console_card.h"
 #include "drag_controller.h"
 #include "hit_result.h"
@@ -9,14 +11,19 @@ renderer::renderer()
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
   InitWindow(_screen_width, _screen_height, _window_title);
 
-  Image icon = LoadImage("assets/icon.png");
+  const std::filesystem::path exe_dir{GetApplicationDirectory()};
+  const std::filesystem::path assets_dir = exe_dir / "assets";
+  const auto asset_path = [&](const char* rel)
+  { return (assets_dir / rel).string(); };
+
+  Image icon = LoadImage(asset_path("icon.png").c_str());
   if (icon.data)
   {
     SetWindowIcon(icon);
     UnloadImage(icon);
   }
 
-  _cards_tex = LoadTexture("assets/cards_spritesheet_96_128.png");
+  _cards_tex = LoadTexture(asset_path("cards_spritesheet_96_128.png").c_str());
   if (_cards_tex.id != 0)
   {
     SetTextureFilter(_cards_tex, TEXTURE_FILTER_BILINEAR);
@@ -32,8 +39,8 @@ renderer::renderer()
         0xFE0F,  // VS16 for emoji presentation
     };
     _emoji_font =
-        LoadFontEx("assets/Noto_Emoji/NotoEmoji-Regular.ttf", 32, codepoints,
-                   sizeof(codepoints) / sizeof(codepoints[0]));
+        LoadFontEx(asset_path("Noto_Emoji/NotoEmoji-Regular.ttf").c_str(), 32,
+                   codepoints, sizeof(codepoints) / sizeof(codepoints[0]));
 
     if (_emoji_font.texture.id != 0)
     {
