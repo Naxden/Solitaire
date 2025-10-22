@@ -5,6 +5,11 @@
 #include "hit_result.h"
 #include "renderer.h"
 
+// Disable the console in Windows releases
+#if defined(WIN32) && !defined(_DEBUG)
+#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
+
 int main()
 {
   renderer renderer;
