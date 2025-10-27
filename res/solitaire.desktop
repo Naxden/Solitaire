@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Solitaire
+Comment=Solitaire game made with C++ and Raylib
+Exec=/usr/bin/Solitaire/Solitaire
+Icon=/usr/share/icons/hicolor/256x256/apps/solitaire.png
+Terminal=false
+Type=Application
+Categories=Game;Application;
+StartupNotify=true

@@ -1,28 +1,49 @@
 cmake_minimum_required(VERSION 3.15)
-project(Solitaire VERSION 1.0.0)
+project(Solitaire VERSION 1.0.1)
 
-include(FetchContent)
 
 set(SOLITAIRE_VERSION "${PROJECT_VERSION}")
 set(SOLITAIRE_BUNDLE_IDENTIFIER "com.naxden.solitaire")
 
 if(APPLE)
-  configure_file(
-    ${CMAKE_SOURCE_DIR}/res/Info.plist.in
-    ${CMAKE_BINARY_DIR}/Solitaire-Info.plist
-    @ONLY)
-endif()
-
+configure_file(
+  ${CMAKE_SOURCE_DIR}/res/Info.plist.in
+  ${CMAKE_BINARY_DIR}/Solitaire-Info.plist
+  @ONLY)
+  endif()
+  
 # Raylib
 set(RAYLIB_VERSION 5.5)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+include(FetchContent)
 FetchContent_Declare(
     raylib
     URL https://github.com/raysan5/raylib/archive/refs/tags/${RAYLIB_VERSION}.tar.gz
     FIND_PACKAGE_ARGS ${RAYLIB_VERSION}
     DOWNLOAD_EXTRACT_TIMESTAMP true
 )
-set(BUILD_EXAMPLES OFF CACHE INTERNAL "")
+
+# Temporarily skip install rule generation so raylib does not install headers/libs into the package.
+if(DEFINED CMAKE_SKIP_INSTALL_RULES)
+  set(_solitaire_prev_skip_install "${CMAKE_SKIP_INSTALL_RULES}")
+  set(_solitaire_prev_skip_install_defined TRUE)
+endif()
+set(CMAKE_SKIP_INSTALL_RULES ON)
 FetchContent_MakeAvailable(raylib)
+FetchContent_GetProperties(raylib)
+if(NOT EXISTS "${raylib_BINARY_DIR}/cmake_install.cmake")
+  file(WRITE "${raylib_BINARY_DIR}/cmake_install.cmake" "# raylib install disabled\n")
+endif()
+if(_solitaire_prev_skip_install_defined)
+  set(CMAKE_SKIP_INSTALL_RULES "${_solitaire_prev_skip_install}")
+else()
+  unset(CMAKE_SKIP_INSTALL_RULES)
+endif()
+unset(_solitaire_prev_skip_install)
+unset(_solitaire_prev_skip_install_defined)
 
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS src/*.cpp)
 
@@ -72,21 +93,31 @@ if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework OpenGL")
 endif()
 
+set(CPACK_MONOLITHIC_INSTALL OFF)
 if(APPLE)
   set(CPACK_DMG_APPLICATIONS_SYMLINK ON)
-  set(CPACK_MONOLITHIC_INSTALL OFF)
   install(TARGETS Solitaire
           BUNDLE DESTINATION .
           COMPONENT SolitaireApp)
   set(CPACK_COMPONENTS_ALL SolitaireApp)
-else()
+elseif(WIN32)
   install(TARGETS Solitaire
-          RUNTIME DESTINATION .
-          BUNDLE  DESTINATION .)
+    RUNTIME DESTINATION .)
   install(DIRECTORY assets DESTINATION .)
+else()
+  set(SOLITAIRE_APP_DESTINATION "bin/Solitaire")
+  install(TARGETS Solitaire
+    RUNTIME DESTINATION ${SOLITAIRE_APP_DESTINATION})
+  install(DIRECTORY assets DESTINATION ${SOLITAIRE_APP_DESTINATION})
+  set(APP_SHRTCT "${CMAKE_SOURCE_DIR}/res/solitaire.desktop")
+  configure_file(${APP_SHRTCT} ${CMAKE_BINARY_DIR}/solitaire.desktop COPYONLY)
+  install(FILES ${CMAKE_BINARY_DIR}/solitaire.desktop DESTINATION share/applications)
+  install(FILES ${CMAKE_SOURCE_DIR}/assets/icon.png
+    DESTINATION share/icons/hicolor/256x256/apps
+    RENAME solitaire.png)
 endif()
 
-include(InstallRequiredSystemLibraries)
+# include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_NAME "Solitaire")
 set(CPACK_PACKAGE_VENDOR "Naxden")
@@ -107,8 +138,9 @@ elseif(APPLE)
   set(CPACK_PACKAGE_FILE_NAME "Solitaire-${PROJECT_VERSION}")
 else()
   set(CPACK_GENERATOR "DEB")
-  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Twoje imię <email>")
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2, libx11-6, ...")
+  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Naxden")
+  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Solitaire game made with C++ and Raylib")
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/")
 endif()
 
 include(CPack)
