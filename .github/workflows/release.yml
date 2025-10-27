@@ -27,21 +27,33 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Package
+      - name: Package (CPack)
+        run: cmake --build build --target package
+
+      - name: Collect Linux artifacts
         env:
           TAG: ${{ github.ref_name }}
         run: |
+          mkdir -p dist
           mkdir -p dist/Solitaire
           cp build/Solitaire dist/Solitaire/Solitaire
           chmod +x dist/Solitaire/Solitaire
           cp -r assets dist/Solitaire/assets
           cp LICENSE README.md dist/Solitaire/
           tar -C dist -czf "Solitaire_${TAG}-linux-x86_64.tar.gz" Solitaire
+          mv "Solitaire_${TAG}-linux-x86_64.tar.gz" dist/
+          rm -rf dist/Solitaire
+          DEB_FILE=$(find build -maxdepth 1 -type f -name 'Solitaire-*.deb' | head -n1)
+          if [ -n "$DEB_FILE" ]; then
+            mv "$DEB_FILE" "dist/Solitaire_${TAG}-linux-x86_64.deb"
+          else
+            echo "warning: no DEB package produced" >&2
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: Solitaire-linux
-          path: Solitaire_*-linux-*.tar.gz
+          path: dist/Solitaire_*-linux-*
 
   windows:
     runs-on: windows-latest
@@ -54,23 +66,25 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Package
+      - name: Package (CPack)
+        run: cmake --build build --config Release --target PACKAGE
+
+      - name: Collect Windows installer
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          New-Item -ItemType Directory -Force -Path dist/Solitaire | Out-Null
-          Copy-Item build/Release/Solitaire.exe dist/Solitaire/Solitaire.exe
-          Copy-Item assets dist/Solitaire/assets -Recurse
-          Copy-Item LICENSE dist/Solitaire/LICENSE
-          Copy-Item README.md dist/Solitaire/README.md
-          $zipName = "Solitaire_$env:TAG-windows-x64.zip"
-          Compress-Archive -Path dist/Solitaire/* -DestinationPath $zipName
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $installer = Get-ChildItem -Path build -Filter 'Solitaire-*.exe' -File -Recurse | Where-Object { $_.Name -ne 'Solitaire.exe' } | Select-Object -First 1
+          if ($null -eq $installer) {
+            throw 'No NSIS installer produced by CPack.'
+          }
+          Move-Item -Path $installer.FullName -Destination (Join-Path dist "Solitaire_$env:TAG-windows-x64.exe") -Force
 
       - uses: actions/upload-artifact@v4
         with:
           name: Solitaire-windows
-          path: Solitaire_*-windows-*.zip
+          path: dist/Solitaire_*-windows-*.exe
 
   macos:
     runs-on: macos-latest
@@ -83,21 +97,25 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Package
+      - name: Package (CPack)
+        run: cmake --build build --target package
+
+      - name: Collect macOS disk image
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          mkdir -p dist/Solitaire
-          cp build/Solitaire dist/Solitaire/Solitaire
-          chmod +x dist/Solitaire/Solitaire
-          cp -r assets dist/Solitaire/assets
-          cp LICENSE README.md dist/Solitaire/
-          tar -C dist -czf "Solitaire_${TAG}-macos.tar.gz" Solitaire
+          mkdir -p dist
+          DMG_FILE=$(find build -maxdepth 1 -type f -name 'Solitaire-*.dmg' | head -n1)
+          if [ -z "$DMG_FILE" ]; then
+            echo "error: no DMG produced by CPack" >&2
+            exit 1
+          fi
+          mv "$DMG_FILE" "dist/Solitaire_${TAG}-macos.dmg"
 
       - uses: actions/upload-artifact@v4
         with:
           name: Solitaire-macos
-          path: Solitaire_*-macos*.tar.gz
+          path: dist/Solitaire_*-macos*.dmg
 
   publish:
     needs: [linux, windows, macos]
@@ -112,6 +130,9 @@ jobs:
           shopt -s globstar
           mv artifacts/**/Solitaire_*.tar.gz . 2>/dev/null || true
           mv artifacts/**/Solitaire_*.zip . 2>/dev/null || true
+          mv artifacts/**/Solitaire_*.deb . 2>/dev/null || true
+          mv artifacts/**/Solitaire_*.dmg . 2>/dev/null || true
+          mv artifacts/**/Solitaire_*.exe . 2>/dev/null || true
           ls -la
 
       - name: Create GitHub Release
@@ -120,5 +141,8 @@ jobs:
           files: |
             Solitaire_*.zip
             Solitaire_*.tar.gz
+            Solitaire_*.deb
+            Solitaire_*.dmg
+            Solitaire_*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
