@@ -60,6 +60,8 @@ class renderer
   /// @brief Returns the hit rectangle for a pile.
   Rectangle pile_rect_hit(const pile& p) const noexcept;
 
+  void trigger_fullscreen() noexcept;
+
  private:
   Rectangle drag_rect(const drag_overlay& drag) const noexcept;
 
@@ -134,6 +136,7 @@ class renderer
   std::vector<ui_button> _buttons;
   static constexpr int BUTTON_COL_COUNT = 3;
 
+  bool _fullscreen_enabled = false;
   float _scale = 1.f;
 #pragma region UI sizes
 

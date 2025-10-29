@@ -113,6 +113,16 @@ int main()
       auto_move.move_data = std::nullopt;
     }
 
+    if (IsKeyPressed(KEY_H))
+    {
+      game.show_hint();
+    }
+
+    if (IsKeyPressed(KEY_F))
+    {
+      renderer.trigger_fullscreen();
+    }
+
     renderer.update(state, mouse, drag_overlay);
   }
   return 0;

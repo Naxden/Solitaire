@@ -584,6 +584,21 @@ Rectangle renderer::pile_rect_hit(const pile& p) const noexcept
   return rec;
 }
 
+void renderer::trigger_fullscreen() noexcept
+{
+  _fullscreen_enabled = !_fullscreen_enabled;
+
+  if (_fullscreen_enabled)
+  {
+    SetWindowState(FLAG_WINDOW_MAXIMIZED);
+  }
+  else
+  {
+    ClearWindowState(FLAG_WINDOW_MAXIMIZED);
+    SetWindowSize(_screen_width, _screen_height);
+  }
+}
+
 Rectangle renderer::drag_rect(const drag_overlay& drag) const noexcept
 {
   auto card_size = get_scaled_card_size();
