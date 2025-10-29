@@ -6,16 +6,19 @@ A simple Klondike Solitaire implemented in C++20 with Raylib. Features mouse dra
 - Graphics/Input: Raylib 5.5 (fetched via CMake)
 - Assets: card sprite sheets in assets/
 
-## Features 
+## Features
 
 - Drag & drop moving of single cards or chains
 - Click stock to advance deck
 - Undo last move
-- UI buttons: New Game, Undo move
+- Next move hint
+- UI buttons: New Game, Undo move, Show hint
 - Auto-move animation when deck is empty and game is won
 - Win/lose status text overlay
+- Toggle fullscreen mode
 
 Core modules:
+
 - Game logic: [game](include/game.h)
   - State export: `game::export_game_state`
   - Moves/undo: `game::move_card`, `game::undo_move`, `game::next_deck`
@@ -27,6 +30,7 @@ Core modules:
 - Entry point (input + main loop): [main](src/main.cpp)
 
 Architecture:
+
 - [main](src/main.cpp): handles input and translates it to game commands; registers UI buttons
 - [game](include/game.h): owns state and rules; provides snapshot for rendering
 - [renderer](include/renderer.h): draws and performs view-space hit-tests
@@ -40,9 +44,12 @@ Architecture:
 - Keyboard
   - R: new game
   - Z: undo last move
+  - H: show next move hint
+  - F: toggle fullscreen mode
 - UI Buttons (bottom-right)
   - New Game
   - Undo move
+  - Show Hint
 
 ## Build
 
@@ -57,11 +64,17 @@ cmake --build build --parallel
 ./build/Solitaire
 ```
 
+## Download and play
+
+If you don't want to build code yourself check out `Releases` with already built packages or play in your webbrowser at https://naxden.itch.io/solitaire.
+Due to lack of official license, packages for Windows and MacOS are marked as untrusted.
+
 ## Credits
 
 - Raylib by raysan5 at https://github.com/raysan5/raylib
 - Card sprites by Jorel at https://games-by-jorel.itch.io/jorels-card-pack
 
 ## Gameplay screenshots
+
 <img src="images/gameplay.png">
 <img src="images/gamelost.png">
